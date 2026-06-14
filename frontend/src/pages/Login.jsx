@@ -5,7 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -15,7 +15,7 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      await login(email, password);
+      await login(username, password);
       navigate("/");
     } catch (err) {
       setError(
@@ -38,7 +38,7 @@ export default function Login() {
         width: "100%", maxWidth: 400, boxShadow: "0 16px 48px rgba(0,0,0,0.25)",
       }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 48 }}>🚛</div>
+          <div style={{ fontSize: 48 }}>&#x1F69B;</div>
           <h1 style={{ color: "#1a5276", fontWeight: 800, fontSize: 24, marginTop: 8 }}>TMS</h1>
           <p style={{ color: "#7f8c9a", fontSize: 14, marginTop: 4 }}>Sistema de Gestión de Transporte</p>
         </div>
@@ -47,17 +47,17 @@ export default function Login() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Correo electrónico</label>
+            <label>Usuario</label>
             <input
-              type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@tms.local" required autoFocus
+              type="text" value={username} onChange={(e) => setUsername(e.target.value)}
+              placeholder="sosaro" required autoFocus autoComplete="username"
             />
           </div>
           <div className="form-group">
             <label>Contraseña</label>
             <input
               type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••" required
+              placeholder="••••••••" required autoComplete="current-password"
             />
           </div>
           <button
@@ -74,7 +74,7 @@ export default function Login() {
         </form>
 
         <p style={{ marginTop: 24, textAlign: "center", color: "#7f8c9a", fontSize: 12 }}>
-          admin@tms.local / Admin1234!
+          Usuario: sosaro &nbsp;|&nbsp; Contraseña: sosaro4x4
         </p>
       </div>
     </div>

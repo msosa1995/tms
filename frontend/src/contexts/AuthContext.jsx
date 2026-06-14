@@ -31,8 +31,8 @@ export function AuthProvider({ children }) {
     }
   }
 
-  async function login(email, password) {
-    const { data } = await axios.post(`${API_URL}/v1/auth/token/`, { email, password });
+  async function login(username, password) {
+    const { data } = await axios.post(`${API_URL}/v1/auth/token/`, { username, password });
     localStorage.setItem("access_token", data.access);
     localStorage.setItem("refresh_token", data.refresh);
     await fetchMe(data.access);

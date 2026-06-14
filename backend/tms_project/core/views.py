@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
@@ -245,6 +246,176 @@ class GastoViewSet(viewsets.ModelViewSet):
         )
         return Response(list(data))
 
+    @action(detail=False, methods=["post"], url_path="importar-excel",
+            parser_classes=[MultiPartParser, FormParser])
+    def importar_excel(self, request):
+        import openpyxl
+        from decimal import Decimal, InvalidOperation
+        from datetime import date as date_cls, datetime as datetime_cls
+
+        archivo = request.FILES.get("archivo")
+        if not archivo:
+            return Response({"error": "No se envió ningún archivo."}, status=400)
+
+        MESES_ES = {
+            "ene": 1, "enero": 1, "feb": 2, "febrero": 2, "mar": 3, "marzo": 3,
+            "abr": 4, "abril": 4, "may": 5, "mayo": 5, "jun": 6, "junio": 6,
+            "jul": 7, "julio": 7, "ago": 8, "agosto": 8, "sep": 9, "sept": 9,
+            "septiembre": 9, "oct": 10, "octubre": 10, "nov": 11, "noviembre": 11,
+            "dic": 12, "diciembre": 12,
+        }
+
+        CONCEPTO_CATEGORIA = {
+            "aceite": "combustible", "combustible": "combustible", "fluido": "combustible",
+            "gasoil": "combustible", "nafta": "combustible",
+            "mecanico": "reparaciones", "mecanica": "reparaciones", "elastico": "reparaciones",
+            "embrague": "reparaciones", "bateria": "reparaciones", "alternador": "reparaciones",
+            "trasero": "reparaciones", "bidon": "reparaciones", "bolt": "reparaciones",
+            "repuesto": "reparaciones", "air comb": "reparaciones",
+            "limitador": "reparaciones", "focos": "reparaciones", "correa": "reparaciones",
+            "soporte": "reparaciones", "tapa combus": "reparaciones", "acople": "reparaciones",
+            "electricista": "reparaciones", "freno": "reparaciones", "additivo": "reparaciones",
+            "mano de obra": "reparaciones", "herramientas": "reparaciones",
+            "cubierta": "neumaticos", "neumatico": "neumaticos", "goma": "neumaticos",
+            "seguro": "seguros",
+            "peaje": "peajes",
+            "penayo": "viaticos", "viatico": "viaticos", "habitacion": "viaticos",
+            "empanada": "viaticos", "almuerzo": "viaticos", "interes": "viaticos",
+            "plus chofer": "viaticos", "plus vianda": "viaticos", "incentivo": "viaticos",
+            "escribania": "impuestos", "iva": "impuestos", "factura para iva": "impuestos",
+            "impuesto": "impuestos", "multa": "impuestos", "patente": "impuestos",
+            "medicamento": "otros", "franela": "otros", "lavado": "otros", "gps": "otros",
+            "carpa": "otros", "tapiceria": "otros", "tapizeria": "otros",
+            "pomo": "otros", "tuerca": "otros", "llave": "otros",
+            "regalo": "otros", "canasta": "otros", "foco": "otros",
+        }
+
+        def detectar_categoria(concepto):
+            c = (concepto or "").lower()
+            for kw, cat in CONCEPTO_CATEGORIA.items():
+                if kw in c:
+                    return cat
+            return "otros"
+
+        def parsear_fecha(val, anno_ref):
+            # Tipo datetime de Python (openpyxl convierte fechas Excel a datetime)
+            if isinstance(val, datetime_cls):
+                return val.date()
+            # Tipo date de Python
+            if isinstance(val, date_cls):
+                return val
+            # Número (serial Excel: días desde 1900-01-01)
+            if isinstance(val, (int, float)):
+                try:
+                    from openpyxl.utils.datetime import from_excel
+                    return from_excel(val).date()
+                except Exception:
+                    pass
+            # String — intentar parsear
+            s = str(val).strip()
+            if not s or s.lower() in ("none", "fecha", ""):
+                return None
+            sl = s.lower()
+            # Formato "DD-MMM" o "D-MMM" (ej: "10-mar", "2-abr")
+            for mes_nombre, mes_num in sorted(MESES_ES.items(), key=lambda x: -len(x[0])):
+                if mes_nombre in sl:
+                    resto = sl.replace(mes_nombre, "").replace("-", "").replace("/", "").replace(" ", "").strip()
+                    if resto.isdigit():
+                        dia = int(resto)
+                        return date_cls(anno_ref[0], mes_num, dia)
+            # Formatos DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD
+            import re
+            m = re.match(r"(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})", s)
+            if m:
+                a, b, c = int(m.group(1)), int(m.group(2)), int(m.group(3))
+                if c > 31:
+                    return date_cls(c, b, a)
+                else:
+                    yr = c + 2000 if c < 100 else c
+                    return date_cls(yr, b, a)
+            m2 = re.match(r"(\d{4})[/\-](\d{1,2})[/\-](\d{1,2})", s)
+            if m2:
+                return date_cls(int(m2.group(1)), int(m2.group(2)), int(m2.group(3)))
+            return None
+
+        try:
+            wb = openpyxl.load_workbook(archivo, data_only=True)
+            ws = wb.active
+        except Exception as e:
+            return Response({"error": f"No se pudo leer el archivo: {e}"}, status=400)
+
+        vehiculo = Vehiculo.objects.first()
+        creados = 0
+        errores = []
+        anno_ref = [2025]
+        mes_anterior = 0
+        # Guardar muestra de primera fila para debug
+        muestra = None
+
+        for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if not row or len(row) < 3:
+                continue
+            fecha_val = row[0]
+            monto_val = row[1]
+            concepto_val = row[2]
+
+            if fecha_val is None and monto_val is None:
+                continue
+
+            # Guardar muestra de la primera fila con datos
+            if muestra is None:
+                muestra = f"tipo={type(fecha_val).__name__} val='{fecha_val}'"
+
+            fecha = parsear_fecha(fecha_val, anno_ref)
+            if not fecha:
+                errores.append(f"Fila {i}: fecha no reconocida '{fecha_val}' (tipo: {type(fecha_val).__name__})")
+                if len(errores) >= 5:
+                    break
+                continue
+
+            if fecha.month < mes_anterior and mes_anterior >= 11:
+                anno_ref[0] += 1
+                fecha = fecha.replace(year=anno_ref[0])
+            mes_anterior = fecha.month
+
+            try:
+                monto_str = str(monto_val).replace(",", ".").replace(" ", "")
+                monto = Decimal(monto_str)
+            except (InvalidOperation, TypeError):
+                errores.append(f"Fila {i}: monto inválido '{monto_val}'")
+                continue
+
+            if monto <= 0:
+                continue
+
+            descripcion = str(concepto_val or "").strip() or "Sin descripción"
+            categoria = detectar_categoria(descripcion)
+
+            try:
+                Gasto.objects.create(
+                    fecha=fecha,
+                    monto=monto,
+                    descripcion=descripcion,
+                    categoria=categoria,
+                    moneda="PYG",
+                    vehiculo=vehiculo,
+                    created_by=request.user,
+                )
+                creados += 1
+            except Exception as e:
+                errores.append(f"Fila {i}: error al guardar — {e}")
+
+        if creados == 0 and errores and muestra:
+            errores.insert(0, f"DEBUG primera celda: {muestra}")
+
+        return Response({
+            "creados": creados,
+            "errores": errores[:25],
+            "mensaje": f"Se importaron {creados} gastos correctamente." + (
+                f" ({len(errores)} filas con error)" if errores else ""
+            ),
+        })
+
 
 class MantenimientoViewSet(viewsets.ModelViewSet):
     queryset = Mantenimiento.objects.select_related("vehiculo", "created_by").all()
@@ -280,60 +451,72 @@ class DashboardViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def list(self, request):
+        from django.db.models.functions import TruncMonth
         hoy = timezone.now().date()
-        inicio_mes = hoy.replace(day=1)
-        inicio_anio = hoy.replace(month=1, day=1)
+        hace_12m = hoy.replace(year=hoy.year - 1)
 
-        # KPIs del mes actual
-        ingresos_mes = Ingreso.objects.filter(
-            fecha__gte=inicio_mes
-        ).aggregate(total=Sum("monto"))["total"] or 0
+        # ── Totales acumulados ──────────────────────────────────────────────
+        total_ingresos = Ingreso.objects.aggregate(t=Sum("monto"))["t"] or 0
+        total_gastos = Gasto.objects.aggregate(t=Sum("monto"))["t"] or 0
+        ganancia_total = total_ingresos - total_gastos
+        margen = float(ganancia_total / total_ingresos * 100) if total_ingresos else 0
 
-        gastos_mes = Gasto.objects.filter(
-            fecha__gte=inicio_mes
-        ).aggregate(total=Sum("monto"))["total"] or 0
+        # ── Último período facturado ────────────────────────────────────────
+        ultimo_ingreso = Ingreso.objects.order_by("-fecha").first()
+        ultimo_ingreso_monto = float(ultimo_ingreso.monto) if ultimo_ingreso else 0
+        ultimo_ingreso_fecha = str(ultimo_ingreso.fecha) if ultimo_ingreso else None
+        ultimo_ingreso_obs = (ultimo_ingreso.observaciones or "") if ultimo_ingreso else ""
 
-        viajes_mes = Viaje.objects.filter(
-            fecha_salida__gte=inicio_mes,
-            estado=EstadoViaje.FINALIZADO,
-        ).count()
+        # ── Gastos últimos 90 días ──────────────────────────────────────────
+        hace_90d = hoy - timezone.timedelta(days=90)
+        gastos_90d = Gasto.objects.filter(fecha__gte=hace_90d).aggregate(t=Sum("monto"))["t"] or 0
 
-        km_mes = sum(
-            v.distancia_recorrida or 0
-            for v in Viaje.objects.filter(
-                fecha_salida__gte=inicio_mes,
-                estado=EstadoViaje.FINALIZADO,
-            )
-        )
-
-        # Gastos por categoría del mes
+        # ── Gastos por categoría (todo el período) ──────────────────────────
         gastos_categoria = dict(
-            Gasto.objects.filter(fecha__gte=inicio_mes)
-            .values_list("categoria")
-            .annotate(total=Sum("monto"))
+            Gasto.objects.values_list("categoria").annotate(total=Sum("monto"))
         )
 
-        # Top 5 clientes por ingreso del año
-        top_clientes = list(
-            Ingreso.objects.filter(fecha__gte=inicio_anio)
-            .values("cliente__razon_social")
+        # ── Evolución mensual ingresos vs gastos (últimos 12 meses) ────────
+        ingresos_mes = list(
+            Ingreso.objects.filter(fecha__gte=hace_12m)
+            .annotate(mes=TruncMonth("fecha"))
+            .values("mes")
             .annotate(total=Sum("monto"))
-            .order_by("-total")[:5]
+            .order_by("mes")
+        )
+        gastos_mes_lista = list(
+            Gasto.objects.filter(fecha__gte=hace_12m)
+            .annotate(mes=TruncMonth("fecha"))
+            .values("mes")
+            .annotate(total=Sum("monto"))
+            .order_by("mes")
         )
 
-        ganancia_neta = ingresos_mes - gastos_mes
-        margen = float(ganancia_neta / ingresos_mes * 100) if ingresos_mes else 0
-        costo_por_km = float(gastos_mes / km_mes) if km_mes else 0
+        # ── Gastos recientes (últimos 10) ────────────────────────────────────
+        gastos_recientes = list(
+            Gasto.objects.order_by("-fecha")[:10]
+            .values("fecha", "descripcion", "categoria", "monto")
+        )
 
         return Response({
-            "periodo": {"inicio": inicio_mes, "fin": hoy},
-            "ingresos_mes": ingresos_mes,
-            "gastos_mes": gastos_mes,
-            "ganancia_neta": ganancia_neta,
+            "total_ingresos": total_ingresos,
+            "total_gastos": total_gastos,
+            "ganancia_total": ganancia_total,
             "margen_porcentaje": round(margen, 2),
-            "viajes_realizados": viajes_mes,
-            "km_recorridos": km_mes,
-            "costo_por_km": round(costo_por_km, 4),
+            "gastos_90d": gastos_90d,
+            "ultimo_ingreso": {
+                "monto": ultimo_ingreso_monto,
+                "fecha": ultimo_ingreso_fecha,
+                "periodo": ultimo_ingreso_obs,
+            },
             "gastos_por_categoria": gastos_categoria,
-            "top_clientes": top_clientes,
+            "evolucion_ingresos": [
+                {"mes": str(r["mes"])[:7], "total": float(r["total"])} for r in ingresos_mes
+            ],
+            "evolucion_gastos": [
+                {"mes": str(r["mes"])[:7], "total": float(r["total"])} for r in gastos_mes_lista
+            ],
+            "gastos_recientes": [
+                {**g, "fecha": str(g["fecha"]), "monto": float(g["monto"])} for g in gastos_recientes
+            ],
         })

@@ -7,11 +7,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
     TokenRefreshView,
     TokenVerifyView,
     TokenBlacklistView,
 )
+from tms_project.apps.accounts.views import UsernameTokenObtainPairView
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -48,7 +48,7 @@ urlpatterns = [
     path("api/v1/", include(router.urls)),
 
     # ——— Autenticación JWT ——————————————————
-    path("api/v1/auth/token/", TokenObtainPairView.as_view(), name="token_obtain"),
+    path("api/v1/auth/token/", UsernameTokenObtainPairView.as_view(), name="token_obtain"),
     path("api/v1/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/v1/auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
     path("api/v1/auth/logout/", TokenBlacklistView.as_view(), name="token_blacklist"),
