@@ -1,8 +1,11 @@
 """
 settings/railway.py — Producción en Railway (cloud)
 """
-from .base import *
 import os
+
+os.environ.setdefault("SECRET_KEY", "django-insecure-tms-alas-paraguay-2025-x9k-m-p-z-q8v3n")
+
+from .base import *
 
 DEBUG = False
 
