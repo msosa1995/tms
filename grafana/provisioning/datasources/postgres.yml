@@ -1,0 +1,21 @@
+# grafana/provisioning/datasources/postgres.yml
+apiVersion: 1
+
+datasources:
+  - name: TMS-PostgreSQL
+    type: postgres
+    uid: tms-postgres
+    url: db:5432
+    user: ${POSTGRES_USER}
+    secureJsonData:
+      password: ${POSTGRES_PASSWORD}
+    jsonData:
+      database: ${POSTGRES_DB}
+      sslmode: disable
+      maxOpenConns: 10
+      maxIdleConns: 5
+      connMaxLifetime: 14400
+      postgresVersion: 1600
+      timescaledb: false
+    isDefault: true
+    editable: false

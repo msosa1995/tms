@@ -1,0 +1,192 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {"type": "postgres", "uid": "tms-postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "green", "value": null}]
+          },
+          "unit": "locale"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "title": "Ingresos del mes",
+      "type": "stat",
+      "targets": [{
+        "datasource": {"type": "postgres", "uid": "tms-postgres"},
+        "rawSql": "SELECT COALESCE(SUM(monto),0) as value FROM ingresos_ingreso WHERE DATE_TRUNC('month', fecha) = DATE_TRUNC('month', CURRENT_DATE)",
+        "format": "table",
+        "refId": "A"
+      }]
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "tms-postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "red", "value": null}]
+          },
+          "unit": "locale"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Gastos del mes",
+      "type": "stat",
+      "targets": [{
+        "datasource": {"type": "postgres", "uid": "tms-postgres"},
+        "rawSql": "SELECT COALESCE(SUM(monto),0) as value FROM ingresos_gasto WHERE DATE_TRUNC('month', fecha) = DATE_TRUNC('month', CURRENT_DATE)",
+        "format": "table",
+        "refId": "A"
+      }]
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "tms-postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "red", "value": null}, {"color": "yellow", "value": 0}, {"color": "green", "value": 1}]
+          },
+          "unit": "locale"
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Ganancia neta del mes",
+      "type": "stat",
+      "targets": [{
+        "datasource": {"type": "postgres", "uid": "tms-postgres"},
+        "rawSql": "SELECT COALESCE(SUM(CASE WHEN t='i' THEN m ELSE -m END),0) as value FROM (SELECT monto as m, 'i' as t FROM ingresos_ingreso WHERE DATE_TRUNC('month', fecha) = DATE_TRUNC('month', CURRENT_DATE) UNION ALL SELECT monto, 'g' FROM ingresos_gasto WHERE DATE_TRUNC('month', fecha) = DATE_TRUNC('month', CURRENT_DATE)) x",
+        "format": "table",
+        "refId": "A"
+      }]
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "tms-postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue", "value": null}]}
+        }
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "id": 4,
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Viajes del mes",
+      "type": "stat",
+      "targets": [{
+        "datasource": {"type": "postgres", "uid": "tms-postgres"},
+        "rawSql": "SELECT COUNT(*) as value FROM viajes_viaje WHERE estado='finalizado' AND DATE_TRUNC('month', fecha_salida) = DATE_TRUNC('month', CURRENT_DATE)",
+        "format": "table",
+        "refId": "A"
+      }]
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "tms-postgres"},
+      "fieldConfig": {
+        "defaults": {"custom": {"lineWidth": 2}, "unit": "locale"},
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Gastos"}, "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Ingresos"}, "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "id": 5,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "title": "Ingresos vs Gastos — Últimos 12 meses",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {"type": "postgres", "uid": "tms-postgres"},
+          "rawSql": "SELECT DATE_TRUNC('month', fecha) as time, SUM(monto) as Ingresos FROM ingresos_ingreso WHERE fecha >= NOW() - INTERVAL '12 months' GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "postgres", "uid": "tms-postgres"},
+          "rawSql": "SELECT DATE_TRUNC('month', fecha) as time, SUM(monto) as Gastos FROM ingresos_gasto WHERE fecha >= NOW() - INTERVAL '12 months' GROUP BY 1 ORDER BY 1",
+          "format": "time_series",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "tms-postgres"},
+      "fieldConfig": {"defaults": {"unit": "locale"}},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "id": 6,
+      "options": {"legend": {"displayMode": "table", "placement": "right"}, "pieType": "donut"},
+      "title": "Gastos por categoría — Mes actual",
+      "type": "piechart",
+      "targets": [{
+        "datasource": {"type": "postgres", "uid": "tms-postgres"},
+        "rawSql": "SELECT categoria as metric, SUM(monto) as value FROM ingresos_gasto WHERE DATE_TRUNC('month', fecha) = DATE_TRUNC('month', CURRENT_DATE) GROUP BY categoria ORDER BY value DESC",
+        "format": "table",
+        "refId": "A"
+      }]
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "tms-postgres"},
+      "fieldConfig": {"defaults": {"unit": "locale"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "id": 7,
+      "options": {"displayMode": "gradient", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Top 10 clientes por ingreso — Año actual",
+      "type": "bargauge",
+      "targets": [{
+        "datasource": {"type": "postgres", "uid": "tms-postgres"},
+        "rawSql": "SELECT c.razon_social as metric, SUM(i.monto) as value FROM ingresos_ingreso i JOIN clientes_cliente c ON i.cliente_id = c.id WHERE EXTRACT(YEAR FROM i.fecha) = EXTRACT(YEAR FROM CURRENT_DATE) GROUP BY c.razon_social ORDER BY value DESC LIMIT 10",
+        "format": "table",
+        "refId": "A"
+      }]
+    },
+    {
+      "datasource": {"type": "postgres", "uid": "tms-postgres"},
+      "fieldConfig": {
+        "defaults": {"unit": "locale"},
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Ganancia"}, "properties": [{"id": "custom.displayMode", "value": "color-background"}]}
+        ]
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "id": 8,
+      "options": {"footer": {"show": true, "reducer": ["sum"], "fields": ["Ingresos", "Gastos"]}, "showHeader": true},
+      "title": "Rentabilidad por ruta",
+      "type": "table",
+      "targets": [{
+        "datasource": {"type": "postgres", "uid": "tms-postgres"},
+        "rawSql": "SELECT CONCAT(v.origen, ' → ', v.destino) as Ruta, COUNT(v.id) as Viajes, COALESCE(SUM(i.monto),0) as Ingresos, COALESCE(SUM(g.monto),0) as Gastos, COALESCE(SUM(i.monto),0) - COALESCE(SUM(g.monto),0) as Ganancia FROM viajes_viaje v LEFT JOIN ingresos_ingreso i ON i.viaje_id = v.id LEFT JOIN ingresos_gasto g ON g.viaje_id = v.id WHERE v.estado = 'finalizado' GROUP BY 1 ORDER BY Ganancia DESC LIMIT 20",
+        "format": "table",
+        "refId": "A"
+      }]
+    }
+  ],
+  "refresh": "5m",
+  "schemaVersion": 38,
+  "tags": ["tms", "ejecutivo"],
+  "templating": {"list": []},
+  "time": {"from": "now-6M", "to": "now"},
+  "timepicker": {},
+  "timezone": "America/Asuncion",
+  "title": "TMS — Dashboard Ejecutivo",
+  "uid": "tms-ejecutivo",
+  "version": 1
+}

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\msosa\\\\Desktop\\\\PROYECTOS\\\\Proyecto_Camion\\\\tms\\\\backend\\\\logs\")",
+      "PowerShell(New-Item -ItemType File -Force \"c:\\\\Users\\\\msosa\\\\Desktop\\\\PROYECTOS\\\\Proyecto_Camion\\\\tms\\\\backend\\\\logs\\\\.gitkeep\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\msosa\\\\Desktop\\\\PROYECTOS\\\\Proyecto_Camion\\\\tms\\\\backend\\\\static\")",
+      "PowerShell(New-Item -ItemType File -Force \"c:\\\\Users\\\\msosa\\\\Desktop\\\\PROYECTOS\\\\Proyecto_Camion\\\\tms\\\\backend\\\\static\\\\.gitkeep\")"
+    ]
+  }
+}
