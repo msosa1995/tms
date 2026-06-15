@@ -20,4 +20,4 @@ RUN python manage.py collectstatic --noinput || true
 
 EXPOSE 8080
 
-CMD python manage.py migrate --noinput && python manage.py create_default_user && exec gunicorn tms_project.wsgi:application --bind 0.0.0.0:${PORT:-8080} --workers 1 --timeout 120 --access-logfile - --error-logfile -
+CMD python manage.py migrate --noinput && python manage.py create_default_user && python -c "import os; from waitress import serve; from tms_project.wsgi import application; port=int(os.environ.get('PORT',8080)); print(f'Waitress serving on port {port}',flush=True); serve(application, host='0.0.0.0', port=port, threads=4)"
