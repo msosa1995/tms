@@ -18,9 +18,11 @@ CACHES = {
     }
 }
 
-# Celery sin worker externo
+# Celery sin worker externo — usar memoria local para no conectar a Redis
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_BROKER_URL = "memory://"
+CELERY_RESULT_BACKEND = "cache+memory://"
 
 # CORS — Vercel frontend
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS", default=[])
@@ -35,11 +37,13 @@ SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
-# Sin axes ni apps de ML/analytics (no disponibles en prod)
+# Sin axes, apps ML/analytics, ni Celery scheduler (no hay Redis en Railway)
 INSTALLED_APPS = [app for app in INSTALLED_APPS if app not in (
     "axes",
     "tms_project.apps.reportes",
     "tms_project.apps.analytics",
+    "django_celery_beat",
+    "django_celery_results",
 )]
 MIDDLEWARE = [m for m in MIDDLEWARE if "axes" not in m]
 AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]
