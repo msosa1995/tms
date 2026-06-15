@@ -1,13 +1,13 @@
 :root {
-  --primary: #1a5276;
-  --primary-dark: #154360;
-  --primary-light: #2e86c1;
+  --primary: #c0392b;
+  --primary-dark: #922b21;
+  --primary-light: #e74c3c;
   --accent: #2ecc71;
   --danger: #e74c3c;
   --warning: #f39c12;
   --bg: #f0f3f7;
-  --sidebar-bg: #1a2a3a;
-  --sidebar-text: #cdd5e0;
+  --sidebar-bg: #111820;
+  --sidebar-text: #b0bec5;
   --white: #ffffff;
   --border: #dce3ec;
   --text: #2c3e50;

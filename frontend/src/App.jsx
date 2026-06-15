@@ -1,8 +1,7 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { AuthProvider } from "./contexts/AuthContext";
 import Layout from "./components/Layout";
-import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Vehiculos from "./pages/Vehiculos";
 import Choferes from "./pages/Choferes";
@@ -14,22 +13,10 @@ import Mantenimiento from "./pages/Mantenimiento";
 import Combustible from "./pages/Combustible";
 import Resumen from "./pages/Resumen";
 
-function PrivateRoute({ children }) {
-  const { user, loading } = useAuth();
-  if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh" }}>Cargando...</div>;
-  if (!user) return <Navigate to="/login" replace />;
-  return children;
-}
-
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/" element={
-        <PrivateRoute>
-          <Layout />
-        </PrivateRoute>
-      }>
+      <Route path="/" element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="vehiculos" element={<Vehiculos />} />
         <Route path="choferes" element={<Choferes />} />
