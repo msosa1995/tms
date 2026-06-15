@@ -17,13 +17,14 @@ from tms_project.core.serializers import (
     ChoferSerializer, ChoferListSerializer, ClienteSerializer,
     ViajeSerializer, ViajeListSerializer, IngresoSerializer,
     GastoSerializer, MantenimientoSerializer, AuditLogSerializer,
+    CargaCombustibleSerializer,
 )
 from tms_project.apps.accounts.models import CustomUser, AuditLog
 from tms_project.apps.vehiculos.models import Vehiculo
 from tms_project.apps.choferes.models import Chofer
 from tms_project.apps.clientes.models import Cliente
 from tms_project.apps.viajes.models import Viaje, EstadoViaje
-from tms_project.apps.ingresos.models import Ingreso, Gasto, CategoriaGasto
+from tms_project.apps.ingresos.models import Ingreso, Gasto, CategoriaGasto, CargaCombustible
 from tms_project.apps.mantenimiento.models import Mantenimiento
 
 
@@ -216,6 +217,152 @@ class IngresoViewSet(viewsets.ModelViewSet):
             .order_by("mes")
         )
         return Response(list(data))
+
+    @action(detail=False, methods=["post"], url_path="importar-excel",
+            parser_classes=[MultiPartParser, FormParser])
+    def importar_excel(self, request):
+        import openpyxl
+        import re
+        from decimal import Decimal, InvalidOperation
+        from datetime import date as date_cls, datetime as datetime_cls
+
+        archivo = request.FILES.get("archivo")
+        if not archivo:
+            return Response({"error": "No se envió ningún archivo."}, status=400)
+
+        MESES_ES = {
+            "enero": 1, "febrero": 2, "marzo": 3, "abril": 4, "mayo": 5,
+            "junio": 6, "julio": 7, "agosto": 8, "septiembre": 9, "setiembre": 9,
+            "octubre": 10, "noviembre": 11, "diciembre": 12,
+            "ene": 1, "feb": 2, "mar": 3, "abr": 4,
+            "jun": 6, "jul": 7, "ago": 8, "sep": 9, "oct": 10, "nov": 11, "dic": 12,
+        }
+
+        def parsear_fecha(val):
+            if isinstance(val, datetime_cls):
+                return val.date()
+            if isinstance(val, date_cls):
+                return val
+            if isinstance(val, (int, float)):
+                try:
+                    from openpyxl.utils.datetime import from_excel
+                    return from_excel(val).date()
+                except Exception:
+                    pass
+            s = str(val).strip()
+            if not s or s.lower() in ("none", "fecha", ""):
+                return None
+            sl = s.lower()
+            # "Lunes, 3 de enero de 2022" o "Martes, 15 de marzo de 2025"
+            m = re.search(r"(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})", sl)
+            if m:
+                dia, mes_nom, anio = int(m.group(1)), m.group(2), int(m.group(3))
+                mes_num = MESES_ES.get(mes_nom)
+                if mes_num:
+                    try:
+                        return date_cls(anio, mes_num, dia)
+                    except ValueError:
+                        pass
+            # DD/MM/YYYY o DD-MM-YYYY
+            m2 = re.match(r"(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})", s)
+            if m2:
+                a, b, c = int(m2.group(1)), int(m2.group(2)), int(m2.group(3))
+                yr = c + 2000 if c < 100 else c
+                try:
+                    return date_cls(yr, b, a)
+                except ValueError:
+                    pass
+            return None
+
+        def parsear_monto(val):
+            if val is None:
+                return None
+            if isinstance(val, (int, float)):
+                return Decimal(str(int(val))) if val > 0 else None
+            s = str(val).replace(".", "").replace(",", "").replace("₲", "").replace(" ", "").strip()
+            try:
+                d = Decimal(s)
+                return d if d > 0 else None
+            except InvalidOperation:
+                return None
+
+        try:
+            wb = openpyxl.load_workbook(archivo, data_only=True)
+            ws = wb.active
+        except Exception as e:
+            return Response({"error": f"No se pudo leer el archivo: {e}"}, status=400)
+
+        # Detectar columnas por encabezado
+        headers = {}
+        for row in ws.iter_rows(min_row=1, max_row=10, values_only=True):
+            if row and any(row):
+                for idx, cell in enumerate(row):
+                    if cell is None:
+                        continue
+                    h = str(cell).strip().lower()
+                    if "fecha" in h and "cobrar" in h:
+                        headers["fecha"] = idx
+                    elif h == "total" or h == "total semana":
+                        headers["total"] = idx
+                if "fecha" in headers and "total" in headers:
+                    break
+
+        if "fecha" not in headers or "total" not in headers:
+            return Response({
+                "error": "No se encontraron las columnas 'FECHA A COBRAR' y 'TOTAL' en el archivo."
+            }, status=400)
+
+        cliente = Cliente.objects.filter(razon_social__icontains="ALAS").first() or Cliente.objects.first()
+        if not cliente:
+            return Response({"error": "No hay clientes registrados."}, status=400)
+
+        creados = 0
+        omitidos = 0
+        errores = []
+
+        for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+            if not row or len(row) <= max(headers["fecha"], headers["total"]):
+                continue
+            fecha_val = row[headers["fecha"]]
+            monto_val = row[headers["total"]]
+            if fecha_val is None or monto_val is None:
+                continue
+
+            fecha = parsear_fecha(fecha_val)
+            monto = parsear_monto(monto_val)
+
+            if not fecha or not monto:
+                omitidos += 1
+                continue
+
+            if fecha.year < 2025:
+                omitidos += 1
+                continue
+
+            if Ingreso.objects.filter(fecha=fecha, cliente=cliente).exists():
+                omitidos += 1
+                continue
+
+            try:
+                Ingreso.objects.create(
+                    cliente=cliente,
+                    fecha=fecha,
+                    monto=monto,
+                    moneda="PYG",
+                    forma_pago="transferencia",
+                    observaciones="Importado desde Excel",
+                    created_by=request.user,
+                )
+                creados += 1
+            except Exception as e:
+                errores.append(f"Fila {i}: {e}")
+
+        return Response({
+            "creados": creados,
+            "omitidos": omitidos,
+            "errores": errores[:10],
+            "mensaje": f"Se importaron {creados} ingresos correctamente.",
+        })
 
 
 class GastoViewSet(viewsets.ModelViewSet):
@@ -444,6 +591,27 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["accion", "modelo", "usuario"]
     ordering_fields = ["timestamp"]
+
+
+class CargaCombustibleViewSet(viewsets.ModelViewSet):
+    queryset = CargaCombustible.objects.all()
+    serializer_class = CargaCombustibleSerializer
+    permission_classes = [IsAuthenticated, PuedeEscribir]
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ["fecha", "litros", "monto"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        fecha_desde = self.request.query_params.get("fecha_desde")
+        fecha_hasta = self.request.query_params.get("fecha_hasta")
+        if fecha_desde:
+            qs = qs.filter(fecha__gte=parse_date(fecha_desde))
+        if fecha_hasta:
+            qs = qs.filter(fecha__lte=parse_date(fecha_hasta))
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
 
 class DashboardViewSet(viewsets.ViewSet):

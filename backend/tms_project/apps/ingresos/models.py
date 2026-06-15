@@ -54,6 +54,26 @@ class Ingreso(models.Model):
         return f"Ingreso {self.id} — {self.cliente} — {self.monto} {self.moneda}"
 
 
+class CargaCombustible(models.Model):
+    fecha = models.DateField(db_index=True)
+    litros = models.DecimalField(max_digits=8, decimal_places=2)
+    monto = models.DecimalField(max_digits=18, decimal_places=2)
+    observaciones = models.TextField(blank=True)
+    created_by = models.ForeignKey(
+        "accounts.CustomUser", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="cargas_combustible"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "carga de combustible"
+        verbose_name_plural = "cargas de combustible"
+        ordering = ["-fecha"]
+
+    def __str__(self):
+        return f"{self.fecha} — {self.litros}L — ₲{self.monto}"
+
+
 class CategoriaGasto(models.TextChoices):
     COMBUSTIBLE = "combustible", _("Combustible")
     PEAJES = "peajes", _("Peajes")

@@ -2,13 +2,34 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import api from "../api/client";
 import Modal from "../components/Modal";
 
-function fmt(n) { return n ? "&#8370; " + Number(n).toLocaleString("es-PY") : "&#8370; 0"; }
+function fmt(n) { return n ? "₲ " + Number(n).toLocaleString("es-PY") : "₲ 0"; }
 
 const CATEGORIAS = ["combustible","peajes","viaticos","reparaciones","neumaticos","mantenimiento","seguros","impuestos","otros"];
 const CAT_LABEL = { combustible:"Combustible", peajes:"Peajes", viaticos:"Viáticos", reparaciones:"Reparaciones", neumaticos:"Neumáticos", mantenimiento:"Mantenimiento", seguros:"Seguros", impuestos:"Impuestos", otros:"Otros" };
 const CAT_COLOR = { combustible:"#e67e22", peajes:"#8e44ad", viaticos:"#27ae60", reparaciones:"#c0392b", neumaticos:"#2980b9", mantenimiento:"#16a085", seguros:"#f39c12", impuestos:"#7f8c8d", otros:"#34495e" };
 
+const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 const EMPTY = { viaje: "", vehiculo: "", fecha: new Date().toISOString().slice(0,10), categoria: "combustible", monto: "", descripcion: "", proveedor: "", numero_comprobante: "" };
+
+function semanaDelMes(fecha) { return Math.ceil(new Date(fecha+"T00:00:00").getDate() / 7); }
+function rangoSemana(s, y, m) {
+  const ini = (s-1)*7+1, fin = Math.min(s*7, new Date(y,m,0).getDate());
+  return `${ini}–${fin} ${MESES[m-1].slice(0,3)}`;
+}
+function agruparGastos(items) {
+  const mapa = {};
+  items.forEach(item => {
+    const [y, m] = item.fecha.split("-").map(Number);
+    const k = `${y}-${String(m).padStart(2,"0")}`;
+    if (!mapa[k]) mapa[k] = { y, m, items: [] };
+    mapa[k].items.push(item);
+  });
+  return Object.entries(mapa).sort((a,b) => b[0].localeCompare(a[0])).map(([k, d]) => {
+    const semanas = {};
+    d.items.forEach(i => { const s = semanaDelMes(i.fecha); if (!semanas[s]) semanas[s]=[]; semanas[s].push(i); });
+    return { k, y: d.y, m: d.m, semanas, total: d.items.reduce((a,i)=>a+Number(i.monto),0) };
+  });
+}
 
 export default function Gastos() {
   const [items, setItems] = useState([]);
@@ -16,6 +37,9 @@ export default function Gastos() {
   const [vehiculos, setVehiculos] = useState([]);
   const [viajes, setViajes] = useState([]);
   const [catFilter, setCatFilter] = useState("");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
+  const [mesesAbiertos, setMesesAbiertos] = useState({});
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
@@ -26,10 +50,12 @@ export default function Gastos() {
 
   const load = useCallback(() => {
     setLoading(true);
-    const params = { page_size: 200, ordering: "-fecha" };
+    const params = { page_size: 500, ordering: "-fecha" };
     if (catFilter) params.categoria = catFilter;
+    if (fechaDesde) params.fecha_desde = fechaDesde;
+    if (fechaHasta) params.fecha_hasta = fechaHasta;
     api.get("/gastos/", { params }).then(r => setItems(r.data.results || r.data)).finally(() => setLoading(false));
-  }, [catFilter]);
+  }, [catFilter, fechaDesde, fechaHasta]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -77,6 +103,8 @@ export default function Gastos() {
   }
 
   const total = items.reduce((s, g) => s + Number(g.monto || 0), 0);
+  const mesesAgrupados = agruparGastos(items);
+  function toggleMes(k) { setMesesAbiertos(p => ({ ...p, [k]: !p[k] })); }
 
   return (
     <div>
@@ -121,53 +149,106 @@ export default function Gastos() {
         </div>
       )}
 
-      <div className="card">
-        <div className="search-bar" style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <select value={catFilter} onChange={e => setCatFilter(e.target.value)} style={{ maxWidth: 200 }}>
+      {/* Filtros */}
+      <div className="card" style={{ marginBottom: 12, padding: "12px 20px" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <select value={catFilter} onChange={e => setCatFilter(e.target.value)} style={{ maxWidth: 180 }}>
             <option value="">Todas las categorías</option>
             {CATEGORIAS.map(c => <option key={c} value={c}>{CAT_LABEL[c]}</option>)}
           </select>
+          <span style={{ color: "#666", fontSize: 13 }}>Desde:</span>
+          <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} style={{ width: 140 }} />
+          <span style={{ color: "#666", fontSize: 13 }}>Hasta:</span>
+          <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} style={{ width: 140 }} />
+          {(fechaDesde || fechaHasta || catFilter) && (
+            <button className="btn btn-outline" style={{ padding: "4px 10px", fontSize: 12 }}
+              onClick={() => { setFechaDesde(""); setFechaHasta(""); setCatFilter(""); }}>Limpiar</button>
+          )}
           <span style={{ marginLeft: "auto", fontWeight: 700, color: "#922b21", fontSize: 15 }}>
-            Total: &#8370; {total.toLocaleString("es-PY")}
+            Total: ₲ {total.toLocaleString("es-PY")}
           </span>
         </div>
-        <div className="table-wrap">
-          {loading ? <div className="loading">Cargando...</div> : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Categoría</th>
-                  <th>Descripción</th>
-                  <th>Vehículo / Viaje</th>
-                  <th>Proveedor</th>
-                  <th>Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.length === 0 ? (
-                  <tr><td colSpan={6}><div className="empty-state">No hay gastos registrados</div></td></tr>
-                ) : items.map(g => (
-                  <tr key={g.id}>
-                    <td>{g.fecha}</td>
-                    <td>
-                      <span className="badge" style={{ background: CAT_COLOR[g.categoria] || "#95a5a6", color: "#fff" }}>
-                        {CAT_LABEL[g.categoria] || g.categoria}
-                      </span>
-                    </td>
-                    <td>{g.descripcion?.slice(0, 60)}</td>
-                    <td style={{ fontSize: 12, color: "#7f8c8d" }}>
-                      {g.viaje_numero ? `Viaje ${g.viaje_numero}` : g.vehiculo ? `Veh. ${g.vehiculo}` : "—"}
-                    </td>
-                    <td>{g.proveedor || "—"}</td>
-                    <td style={{ fontWeight: 700, color: "#922b21" }}>{fmt(g.monto)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
       </div>
+
+      {/* Vista agrupada por mes/semana */}
+      {loading ? <div className="card"><div className="loading">Cargando...</div></div>
+        : mesesAgrupados.length === 0
+        ? <div className="card"><div className="empty-state">No hay gastos registrados</div></div>
+        : mesesAgrupados.map(({ k, y, m, semanas, total: totMes }) => {
+          const abierto = !!mesesAbiertos[k];
+          return (
+            <div key={k} className="card" style={{ marginBottom: 12, padding: 0, overflow: "hidden" }}>
+              <div onClick={() => toggleMes(k)} style={{
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                padding: "14px 20px", cursor: "pointer",
+                background: abierto ? "#fff5f5" : "#fff",
+                borderBottom: abierto ? "1px solid #e2e8f0" : "none", userSelect: "none"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 18, color: abierto ? "#c0392b" : "#444" }}>{abierto ? "▼" : "▶"}</span>
+                  <span style={{ fontWeight: 600, fontSize: 16 }}>{MESES[m-1]} {y}</span>
+                  <span style={{ background: "#e2e8f0", borderRadius: 12, padding: "2px 10px", fontSize: 12, color: "#555" }}>
+                    {Object.values(semanas).flat().length} gastos
+                  </span>
+                </div>
+                <span style={{ fontWeight: 700, fontSize: 18, color: "#922b21" }}>₲ {totMes.toLocaleString("es-PY")}</span>
+              </div>
+              {abierto && (
+                <div style={{ padding: "12px 20px" }}>
+                  {Object.entries(semanas).sort((a,b)=>Number(a[0])-Number(b[0])).map(([sn, entradas]) => {
+                    const totSem = entradas.reduce((a,i)=>a+Number(i.monto),0);
+                    // Resumen por categoría de la semana
+                    const porCat = {};
+                    entradas.forEach(e => { porCat[e.categoria] = (porCat[e.categoria]||0)+Number(e.monto); });
+                    return (
+                      <div key={sn} style={{ marginBottom: 16 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, paddingBottom: 4, borderBottom: "1px solid #f1f5f9" }}>
+                          <div>
+                            <span style={{ fontWeight: 600, color: "#374151", fontSize: 13 }}>Semana {sn}</span>
+                            <span style={{ color: "#888", fontWeight: 400, fontSize: 12, marginLeft: 6 }}>({rangoSemana(Number(sn),y,m)})</span>
+                            <span style={{ marginLeft: 10 }}>
+                              {Object.entries(porCat).map(([cat,val]) => (
+                                <span key={cat} style={{ display:"inline-block", background: CAT_COLOR[cat]||"#95a5a6", color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:10, marginRight:4 }}>
+                                  {CAT_LABEL[cat]||cat}
+                                </span>
+                              ))}
+                            </span>
+                          </div>
+                          <span style={{ fontWeight: 600, color: "#922b21", fontSize: 13 }}>₲ {totSem.toLocaleString("es-PY")}</span>
+                        </div>
+                        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+                          <thead><tr style={{ color:"#888" }}>
+                            <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500 }}>Fecha</th>
+                            <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500 }}>Categoría</th>
+                            <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500 }}>Descripción</th>
+                            <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500 }}>Proveedor</th>
+                            <th style={{ textAlign:"right", padding:"4px 8px", fontWeight:500 }}>Monto</th>
+                          </tr></thead>
+                          <tbody>
+                            {entradas.sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(g => (
+                              <tr key={g.id} style={{ borderTop:"1px solid #f8fafc" }}>
+                                <td style={{ padding:"6px 8px" }}>{g.fecha}</td>
+                                <td style={{ padding:"6px 8px" }}>
+                                  <span style={{ background:CAT_COLOR[g.categoria]||"#95a5a6", color:"#fff", borderRadius:10, padding:"2px 8px", fontSize:11 }}>
+                                    {CAT_LABEL[g.categoria]||g.categoria}
+                                  </span>
+                                </td>
+                                <td style={{ padding:"6px 8px", color:"#555" }}>{g.descripcion?.slice(0,50)}</td>
+                                <td style={{ padding:"6px 8px", color:"#888" }}>{g.proveedor||"—"}</td>
+                                <td style={{ padding:"6px 8px", textAlign:"right", fontWeight:600, color:"#922b21" }}>₲ {Number(g.monto).toLocaleString("es-PY")}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })
+      }
 
       {modal && (
         <Modal title="Registrar Gasto" onClose={closeModal}

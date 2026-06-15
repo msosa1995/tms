@@ -11,6 +11,8 @@ import Viajes from "./pages/Viajes";
 import Ingresos from "./pages/Ingresos";
 import Gastos from "./pages/Gastos";
 import Mantenimiento from "./pages/Mantenimiento";
+import Combustible from "./pages/Combustible";
+import Resumen from "./pages/Resumen";
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -36,6 +38,8 @@ function AppRoutes() {
         <Route path="ingresos" element={<Ingresos />} />
         <Route path="gastos" element={<Gastos />} />
         <Route path="mantenimiento" element={<Mantenimiento />} />
+        <Route path="combustible" element={<Combustible />} />
+        <Route path="resumen" element={<Resumen />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

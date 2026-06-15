@@ -20,7 +20,7 @@ from drf_spectacular.views import (
 from tms_project.core.views import (
     UsuarioViewSet, VehiculoViewSet, ChoferViewSet, ClienteViewSet,
     ViajeViewSet, IngresoViewSet, GastoViewSet, MantenimientoViewSet,
-    AuditLogViewSet, DashboardViewSet,
+    AuditLogViewSet, DashboardViewSet, CargaCombustibleViewSet,
 )
 from tms_project.apps.reportes.views import ReporteViewSet
 from tms_project.apps.analytics.views import AnalyticsViewSet
@@ -36,6 +36,7 @@ router.register(r"ingresos", IngresoViewSet, basename="ingreso")
 router.register(r"gastos", GastoViewSet, basename="gasto")
 router.register(r"mantenimiento", MantenimientoViewSet, basename="mantenimiento")
 router.register(r"audit-log", AuditLogViewSet, basename="audit-log")
+router.register(r"combustible", CargaCombustibleViewSet, basename="combustible")
 router.register(r"dashboard", DashboardViewSet, basename="dashboard")
 router.register(r"reportes", ReporteViewSet, basename="reporte")
 router.register(r"analytics", AnalyticsViewSet, basename="analytics")

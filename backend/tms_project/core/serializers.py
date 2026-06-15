@@ -9,7 +9,7 @@ from tms_project.apps.vehiculos.models import Vehiculo
 from tms_project.apps.choferes.models import Chofer
 from tms_project.apps.clientes.models import Cliente
 from tms_project.apps.viajes.models import Viaje
-from tms_project.apps.ingresos.models import Ingreso, Gasto
+from tms_project.apps.ingresos.models import Ingreso, Gasto, CargaCombustible
 from tms_project.apps.mantenimiento.models import Mantenimiento
 
 
@@ -216,6 +216,22 @@ class GastoSerializer(serializers.ModelSerializer):
 
 
 # ========================
+# COMBUSTIBLE
+# ========================
+
+class CargaCombustibleSerializer(serializers.ModelSerializer):
+    precio_por_litro = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CargaCombustible
+        fields = ["id", "fecha", "litros", "monto", "observaciones", "precio_por_litro", "created_at"]
+
+    def get_precio_por_litro(self, obj):
+        if obj.litros and obj.litros > 0:
+            return round(float(obj.monto) / float(obj.litros))
+        return None
+
+
 # MANTENIMIENTO
 # ========================
 

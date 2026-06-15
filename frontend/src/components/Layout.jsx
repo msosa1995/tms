@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 
 const NAV = [
   { to: "/",           icon: "📊", label: "Dashboard" },
+  { to: "/resumen",    icon: "📈", label: "Resumen" },
   { to: "/viajes",     icon: "🚛", label: "Viajes" },
   { to: "/vehiculos",  icon: "🚚", label: "Vehículos" },
   { to: "/choferes",   icon: "👤", label: "Choferes" },
@@ -11,6 +12,7 @@ const NAV = [
   { to: "/ingresos",   icon: "💰", label: "Ingresos" },
   { to: "/gastos",     icon: "💸", label: "Gastos" },
   { to: "/mantenimiento", icon: "🔧", label: "Mantenimiento" },
+  { to: "/combustible",   icon: "⛽", label: "Combustible" },
 ];
 
 const styles = {

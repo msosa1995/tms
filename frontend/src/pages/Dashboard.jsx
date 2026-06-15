@@ -1,178 +1,174 @@
 import React, { useEffect, useState } from "react";
+import { Bar, Line } from "react-chartjs-2";
+import "chart.js/auto";
 import api from "../api/client";
 
-function fmt(n) {
-  if (n == null) return "₲ 0";
-  return "₲ " + Number(n).toLocaleString("es-PY");
-}
+function fmt(n) { return "₲ " + Number(n || 0).toLocaleString("es-PY"); }
+const MESES_CORTOS = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
-const CAT_COLOR = {
-  combustible: "#e67e22", peajes: "#8e44ad", viaticos: "#27ae60",
-  reparaciones: "#c0392b", neumaticos: "#2980b9", mantenimiento: "#16a085",
-  seguros: "#f39c12", impuestos: "#7f8c8d", otros: "#34495e",
-};
-const CAT_LABEL = {
-  combustible: "Combustible", peajes: "Peajes", viaticos: "Viáticos",
-  reparaciones: "Reparaciones", neumaticos: "Neumáticos", mantenimiento: "Mantenimiento",
-  seguros: "Seguros", impuestos: "Impuestos", otros: "Otros",
-};
-
-function MesLabel(mes) {
-  if (!mes) return "";
-  const [y, m] = mes.split("-");
-  const nombres = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-  return `${nombres[parseInt(m)]} ${y}`;
+function agruparPorMes(items) {
+  const mapa = {};
+  items.forEach(i => {
+    const [y, m] = i.fecha.split("-");
+    const k = `${y}-${m.padStart(2,"0")}`;
+    mapa[k] = (mapa[k] || 0) + Number(i.monto || 0);
+  });
+  return mapa;
 }
 
 export default function Dashboard() {
-  const [data, setData] = useState(null);
+  const [ingresos, setIngresos] = useState([]);
+  const [gastos, setGastos] = useState([]);
+  const [combustible, setCombustible] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
 
   useEffect(() => {
-    api.get("/dashboard/")
-      .then(r => { setData(r.data.results?.[0] || r.data); setLoading(false); })
-      .catch(() => { setError("No se pudo cargar el dashboard"); setLoading(false); });
+    Promise.all([
+      api.get("/ingresos/", { params: { page_size: 500 } }),
+      api.get("/gastos/", { params: { page_size: 500 } }),
+      api.get("/combustible/", { params: { page_size: 500 } }),
+    ]).then(([ri, rg, rc]) => {
+      setIngresos(ri.data.results || ri.data);
+      setGastos(rg.data.results || rg.data);
+      setCombustible(rc.data.results || rc.data);
+    }).finally(() => setLoading(false));
   }, []);
 
+  const mapaI = agruparPorMes(ingresos);
+  const mapaG = agruparPorMes(gastos);
+  const meses = [...new Set([...Object.keys(mapaI), ...Object.keys(mapaG)])].sort();
+  const ultimos8 = meses.slice(-8);
+
+  const totalI = Object.values(mapaI).reduce((a, b) => a + b, 0);
+  const totalG = Object.values(mapaG).reduce((a, b) => a + b, 0);
+  const ganancia = totalI - totalG;
+  const margen = totalI > 0 ? ((ganancia / totalI) * 100).toFixed(1) : 0;
+
+  // KPIs del mes actual
+  const hoy = new Date();
+  const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,"0")}`;
+  const ingMes = mapaI[mesActual] || 0;
+  const gasMes = mapaG[mesActual] || 0;
+  const ganMes = ingMes - gasMes;
+
+  const labels = ultimos8.map(k => {
+    const [y, m] = k.split("-");
+    return `${MESES_CORTOS[parseInt(m)]} ${y.slice(2)}`;
+  });
+
+  const chartIngrGastos = {
+    labels,
+    datasets: [
+      {
+        label: "Ingresos",
+        data: ultimos8.map(k => mapaI[k] || 0),
+        backgroundColor: "rgba(30,132,73,0.75)",
+        borderRadius: 6,
+      },
+      {
+        label: "Gastos",
+        data: ultimos8.map(k => mapaG[k] || 0),
+        backgroundColor: "rgba(192,57,43,0.75)",
+        borderRadius: 6,
+      },
+    ],
+  };
+
+  const gananciaData = ultimos8.map(k => (mapaI[k] || 0) - (mapaG[k] || 0));
+  const chartGanancia = {
+    labels,
+    datasets: [{
+      label: "Ganancia neta",
+      data: gananciaData,
+      borderColor: "#2e86c1",
+      backgroundColor: "rgba(46,134,193,0.15)",
+      fill: true,
+      tension: 0.4,
+      pointRadius: 5,
+      pointBackgroundColor: gananciaData.map(v => v >= 0 ? "#1e8449" : "#c0392b"),
+    }],
+  };
+
+  const chartOpts = {
+    responsive: true,
+    plugins: { legend: { position: "bottom" }, tooltip: {
+      callbacks: { label: ctx => "₲ " + Number(ctx.raw).toLocaleString("es-PY") }
+    }},
+    scales: { y: { ticks: { callback: v => "₲ " + Number(v).toLocaleString("es-PY") } } },
+  };
+
   if (loading) return <div className="loading">Cargando dashboard...</div>;
-  if (error) return <div className="error-msg">{error}</div>;
-  if (!data) return null;
-
-  const margen = data.margen_porcentaje ?? 0;
-  const margenColor = margen >= 40 ? "#1e8449" : margen >= 20 ? "#9a7d0a" : "#922b21";
-
-  // Datos para el gráfico de barras manual
-  const mesesIngresos = {};
-  (data.evolucion_ingresos || []).forEach(r => { mesesIngresos[r.mes] = r.total; });
-  const mesesGastos = {};
-  (data.evolucion_gastos || []).forEach(r => { mesesGastos[r.mes] = r.total; });
-  const todosMeses = [...new Set([
-    ...Object.keys(mesesIngresos),
-    ...Object.keys(mesesGastos),
-  ])].sort();
-  const maxVal = Math.max(
-    ...todosMeses.map(m => Math.max(mesesIngresos[m] || 0, mesesGastos[m] || 0)),
-    1
-  );
-
-  const gastosCateg = Object.entries(data.gastos_por_categoria || {})
-    .sort(([, a], [, b]) => b - a);
-  const totalGastos = gastosCateg.reduce((s, [, v]) => s + v, 0);
 
   return (
     <div>
       <div className="page-header">
-        <h2 className="page-title">Dashboard — Camión ALAS</h2>
-        <span style={{ color: "#7f8c9a", fontSize: 13 }}>Resumen general del negocio</span>
+        <h2 className="page-title">Dashboard</h2>
       </div>
 
-      {/* KPIs principales */}
-      <div className="stat-grid">
-        <div className="stat-card" style={{ borderLeftColor: "#2ecc71" }}>
-          <div className="label">Total Facturado (ALAS)</div>
-          <div className="value" style={{ color: "#1e8449" }}>{fmt(data.total_ingresos)}</div>
-          <div className="sub">Acumulado total</div>
+      {/* KPI Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px,1fr))", gap: 12, marginBottom: 20 }}>
+        {[
+          { label: "Ingresos totales", value: fmt(totalI), color: "#1e8449", sub: `Mes actual: ${fmt(ingMes)}` },
+          { label: "Gastos totales", value: fmt(totalG), color: "#922b21", sub: `Mes actual: ${fmt(gasMes)}` },
+          { label: "Ganancia neta", value: fmt(ganancia), color: ganancia >= 0 ? "#1a5276" : "#c0392b", sub: `Mes actual: ${fmt(ganMes)}` },
+          { label: "Margen general", value: `${margen}%`, color: Number(margen) >= 20 ? "#1e8449" : "#e67e22", sub: `${meses.length} meses registrados` },
+        ].map(k => (
+          <div key={k.label} className="card" style={{ padding: "16px 20px" }}>
+            <div style={{ color: "#888", fontSize: 12, marginBottom: 4 }}>{k.label}</div>
+            <div style={{ fontWeight: 700, fontSize: 22, color: k.color }}>{k.value}</div>
+            <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Gráficos */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ fontWeight: 600, marginBottom: 12, color: "#333" }}>Ingresos vs Gastos (últimos 8 meses)</div>
+          <div style={{ position: "relative", height: 280 }}>
+            <Bar data={chartIngrGastos} options={{ ...chartOpts, maintainAspectRatio: false }} />
+          </div>
         </div>
-        <div className="stat-card" style={{ borderLeftColor: "#e74c3c" }}>
-          <div className="label">Total Gastos</div>
-          <div className="value" style={{ color: "#922b21" }}>{fmt(data.total_gastos)}</div>
-          <div className="sub">Último trimestre: {fmt(data.gastos_90d)}</div>
-        </div>
-        <div className="stat-card" style={{ borderLeftColor: "#f39c12" }}>
-          <div className="label">Ganancia Neta</div>
-          <div className="value" style={{ color: margenColor }}>{fmt(data.ganancia_total)}</div>
-          <div className="sub">Margen: {margen.toFixed(1)}%</div>
-        </div>
-        <div className="stat-card" style={{ borderLeftColor: "#3498db" }}>
-          <div className="label">Último Cobro ALAS</div>
-          <div className="value" style={{ fontSize: 20 }}>{fmt(data.ultimo_ingreso?.monto)}</div>
-          <div className="sub">{data.ultimo_ingreso?.periodo || data.ultimo_ingreso?.fecha || "—"}</div>
+        <div className="card" style={{ padding: 20 }}>
+          <div style={{ fontWeight: 600, marginBottom: 12, color: "#333" }}>Evolución de ganancia neta</div>
+          <div style={{ position: "relative", height: 280 }}>
+            <Line data={chartGanancia} options={{ ...chartOpts, maintainAspectRatio: false }} />
+          </div>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 16, marginBottom: 16 }}>
-        {/* Gráfico de barras ingresos vs gastos por mes */}
-        {todosMeses.length > 0 && (
-          <div className="card">
-            <h3 style={{ marginBottom: 16, color: "#1a5276", fontWeight: 700 }}>Ingresos vs Gastos por Mes</h3>
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 140, paddingBottom: 4 }}>
-              {todosMeses.map(mes => (
-                <div key={mes} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                  <div style={{ width: "100%", display: "flex", gap: 2, alignItems: "flex-end", height: 120 }}>
-                    <div style={{
-                      flex: 1, background: "#2ecc71",
-                      height: `${((mesesIngresos[mes] || 0) / maxVal) * 100}%`,
-                      minHeight: 2, borderRadius: "2px 2px 0 0",
-                    }} title={`Ingreso: ${fmt(mesesIngresos[mes] || 0)}`} />
-                    <div style={{
-                      flex: 1, background: "#e74c3c",
-                      height: `${((mesesGastos[mes] || 0) / maxVal) * 100}%`,
-                      minHeight: 2, borderRadius: "2px 2px 0 0",
-                    }} title={`Gasto: ${fmt(mesesGastos[mes] || 0)}`} />
-                  </div>
-                  <span style={{ fontSize: 9, color: "#7f8c9a", whiteSpace: "nowrap" }}>{MesLabel(mes)}</span>
-                </div>
-              ))}
+      {/* Resumen rápido del mes */}
+      <div className="card" style={{ padding: "16px 20px" }}>
+        <div style={{ fontWeight: 600, marginBottom: 12, color: "#333" }}>
+          Mes actual — {MESES_CORTOS[hoy.getMonth()+1]} {hoy.getFullYear()}
+        </div>
+        <div style={{ display: "flex", gap: 32 }}>
+          <div>
+            <div style={{ fontSize: 12, color: "#888" }}>Ingresos</div>
+            <div style={{ fontWeight: 700, color: "#1e8449", fontSize: 18 }}>{fmt(ingMes)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: "#888" }}>Gastos</div>
+            <div style={{ fontWeight: 700, color: "#922b21", fontSize: 18 }}>{fmt(gasMes)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: "#888" }}>Ganancia</div>
+            <div style={{ fontWeight: 700, color: ganMes >= 0 ? "#1a5276" : "#c0392b", fontSize: 18 }}>{fmt(ganMes)}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: "#888" }}>Margen</div>
+            <div style={{ fontWeight: 700, color: "#e67e22", fontSize: 18 }}>
+              {ingMes > 0 ? ((ganMes / ingMes) * 100).toFixed(1) : 0}%
             </div>
-            <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 11, color: "#7f8c9a" }}>
-              <span><span style={{ display: "inline-block", width: 10, height: 10, background: "#2ecc71", borderRadius: 2, marginRight: 4 }} />Ingresos</span>
-              <span><span style={{ display: "inline-block", width: 10, height: 10, background: "#e74c3c", borderRadius: 2, marginRight: 4 }} />Gastos</span>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: "#888" }}>Cargas combustible</div>
+            <div style={{ fontWeight: 700, color: "#2980b9", fontSize: 18 }}>
+              {combustible.filter(c => c.fecha?.startsWith(mesActual)).length} cargas
             </div>
           </div>
-        )}
-
-        {/* Gastos por categoría */}
-        {gastosCateg.length > 0 && (
-          <div className="card">
-            <h3 style={{ marginBottom: 14, color: "#1a5276", fontWeight: 700 }}>Gastos por Categoría</h3>
-            {gastosCateg.map(([cat, total]) => (
-              <div key={cat} style={{ marginBottom: 8 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 2 }}>
-                  <span style={{ color: "#2c3e50", fontWeight: 600 }}>{CAT_LABEL[cat] || cat}</span>
-                  <span style={{ color: "#7f8c9a" }}>{fmt(total)}</span>
-                </div>
-                <div style={{ background: "#f0f3f7", borderRadius: 4, height: 6 }}>
-                  <div style={{
-                    width: `${(total / totalGastos) * 100}%`,
-                    height: "100%",
-                    background: CAT_COLOR[cat] || "#95a5a6",
-                    borderRadius: 4,
-                  }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Gastos recientes */}
-      {data.gastos_recientes?.length > 0 && (
-        <div className="card">
-          <h3 style={{ marginBottom: 14, color: "#1a5276", fontWeight: 700 }}>Gastos Recientes</h3>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Monto</th></tr>
-              </thead>
-              <tbody>
-                {data.gastos_recientes.map((g, i) => (
-                  <tr key={i}>
-                    <td>{g.fecha}</td>
-                    <td>{g.descripcion}</td>
-                    <td>
-                      <span className="badge" style={{ background: CAT_COLOR[g.categoria] || "#95a5a6", color: "#fff" }}>
-                        {CAT_LABEL[g.categoria] || g.categoria}
-                      </span>
-                    </td>
-                    <td style={{ fontWeight: 700, color: "#922b21" }}>{fmt(g.monto)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

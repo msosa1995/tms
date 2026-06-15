@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import api from "../api/client";
 import Modal from "../components/Modal";
 
@@ -54,13 +54,21 @@ export default function Ingresos() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [mesesAbiertos, setMesesAbiertos] = useState({});
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
+  const [importando, setImportando] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const fileRef = useRef();
 
   const load = useCallback(() => {
     setLoading(true);
-    api.get("/ingresos/", { params: { page_size: 500, ordering: "-fecha" } })
+    const params = { page_size: 500, ordering: "-fecha" };
+    if (fechaDesde) params.fecha_desde = fechaDesde;
+    if (fechaHasta) params.fecha_hasta = fechaHasta;
+    api.get("/ingresos/", { params })
       .then(r => setItems(r.data.results || r.data))
       .finally(() => setLoading(false));
-  }, []);
+  }, [fechaDesde, fechaHasta]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
@@ -69,6 +77,24 @@ export default function Ingresos() {
 
   function toggleMes(clave) {
     setMesesAbiertos(prev => ({ ...prev, [clave]: !prev[clave] }));
+  }
+
+  async function handleImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImportando(true); setImportResult(null);
+    const fd = new FormData();
+    fd.append("archivo", file);
+    try {
+      const r = await api.post("/ingresos/importar-excel/", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setImportResult({ ok: true, ...r.data });
+      load();
+    } catch (err) {
+      setImportResult({ ok: false, mensaje: err.response?.data?.error || "Error al importar." });
+    } finally {
+      setImportando(false);
+      e.target.value = "";
+    }
   }
 
   function openNew() { setForm(EMPTY); setModal(true); setError(""); }
@@ -93,8 +119,40 @@ export default function Ingresos() {
     <div>
       <div className="page-header">
         <h2 className="page-title">Ingresos</h2>
-        <button className="btn btn-primary" onClick={openNew}>+ Registrar Ingreso</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display: "none" }} onChange={handleImport} />
+          <button className="btn btn-outline" onClick={() => fileRef.current.click()} disabled={importando}>
+            {importando ? "Importando..." : "Importar Excel"}
+          </button>
+          <button className="btn btn-primary" onClick={openNew}>+ Registrar Ingreso</button>
+        </div>
       </div>
+
+      <div className="card" style={{ marginBottom: 12, padding: "12px 20px" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <span style={{ color: "#666", fontSize: 13 }}>Desde:</span>
+          <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} style={{ width: 140 }} />
+          <span style={{ color: "#666", fontSize: 13 }}>Hasta:</span>
+          <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} style={{ width: 140 }} />
+          {(fechaDesde || fechaHasta) && (
+            <button className="btn btn-outline" style={{ padding: "4px 10px", fontSize: 12 }}
+              onClick={() => { setFechaDesde(""); setFechaHasta(""); }}>
+              Limpiar
+            </button>
+          )}
+          <span style={{ marginLeft: "auto", fontWeight: 700, color: "#1e8449", fontSize: 15 }}>
+            Total: {fmt(totalGeneral)}
+          </span>
+        </div>
+      </div>
+
+      {importResult && (
+        <div className="card" style={{ marginBottom: 12, padding: "12px 20px", background: importResult.ok ? "#f0fdf4" : "#fef2f2", borderLeft: `4px solid ${importResult.ok ? "#16a34a" : "#dc2626"}` }}>
+          <strong>{importResult.mensaje}</strong>
+          {importResult.ok && importResult.omitidos > 0 && <span style={{ marginLeft: 12, color: "#666" }}>{importResult.omitidos} omitidos (duplicados o sin fecha)</span>}
+          {importResult.errores?.length > 0 && <div style={{ color: "#dc2626", marginTop: 4, fontSize: 12 }}>{importResult.errores.join(" | ")}</div>}
+        </div>
+      )}
 
       {!loading && items.length > 0 && (
         <div className="card" style={{ marginBottom: 16, padding: "14px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
