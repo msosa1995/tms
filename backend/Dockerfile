@@ -18,4 +18,4 @@ COPY . .
 
 RUN python manage.py collectstatic --noinput || true
 
-CMD python manage.py migrate --noinput && python manage.py create_default_user && exec gunicorn tms_project.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 1 --timeout 120 --preload --log-level debug --access-logfile - --error-logfile -
+CMD python manage.py migrate --noinput && python manage.py create_default_user && exec gunicorn tms_project.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 1 --timeout 120 --access-logfile - --error-logfile -
