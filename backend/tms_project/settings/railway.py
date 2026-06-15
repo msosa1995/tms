@@ -35,8 +35,12 @@ SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
-# Sin axes (requiere Redis/BD extra)
-INSTALLED_APPS = [app for app in INSTALLED_APPS if app != "axes"]
+# Sin axes ni apps de ML/analytics (no disponibles en prod)
+INSTALLED_APPS = [app for app in INSTALLED_APPS if app not in (
+    "axes",
+    "tms_project.apps.reportes",
+    "tms_project.apps.analytics",
+)]
 MIDDLEWARE = [m for m in MIDDLEWARE if "axes" not in m]
 AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]
 
