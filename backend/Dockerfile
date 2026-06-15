@@ -20,4 +20,4 @@ RUN python manage.py collectstatic --noinput || true
 
 EXPOSE 8080
 
-CMD python manage.py migrate --noinput && python manage.py create_default_user && python manage.py runserver 0.0.0.0:${PORT:-8080}
+CMD python -c "import http.server,socketserver,os; PORT=int(os.environ.get('PORT',8080)); print(f'Serving on {PORT}',flush=True); socketserver.TCPServer(('0.0.0.0',PORT),http.server.SimpleHTTPRequestHandler).serve_forever()"
