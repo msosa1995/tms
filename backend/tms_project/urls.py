@@ -22,8 +22,12 @@ from tms_project.core.views import (
     ViajeViewSet, IngresoViewSet, GastoViewSet, MantenimientoViewSet,
     AuditLogViewSet, DashboardViewSet, CargaCombustibleViewSet,
 )
-from tms_project.apps.reportes.views import ReporteViewSet
-from tms_project.apps.analytics.views import AnalyticsViewSet
+try:
+    from tms_project.apps.reportes.views import ReporteViewSet as _ReporteViewSet
+    from tms_project.apps.analytics.views import AnalyticsViewSet as _AnalyticsViewSet
+    _ANALYTICS_OK = True
+except Exception:
+    _ANALYTICS_OK = False
 
 # ——— Router ——————————————————————————————————————
 router = DefaultRouter()
@@ -38,8 +42,9 @@ router.register(r"mantenimiento", MantenimientoViewSet, basename="mantenimiento"
 router.register(r"audit-log", AuditLogViewSet, basename="audit-log")
 router.register(r"combustible", CargaCombustibleViewSet, basename="combustible")
 router.register(r"dashboard", DashboardViewSet, basename="dashboard")
-router.register(r"reportes", ReporteViewSet, basename="reporte")
-router.register(r"analytics", AnalyticsViewSet, basename="analytics")
+if _ANALYTICS_OK:
+    router.register(r"reportes", _ReporteViewSet, basename="reporte")
+    router.register(r"analytics", _AnalyticsViewSet, basename="analytics")
 
 # ——— URL Patterns ————————————————————————————————
 urlpatterns = [

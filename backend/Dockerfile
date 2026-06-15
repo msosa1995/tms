@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev gcc gettext curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+COPY requirements-prod.txt .
+RUN pip install --upgrade pip && pip install -r requirements-prod.txt
 
 COPY . .
 
@@ -20,4 +20,4 @@ RUN python manage.py collectstatic --noinput || true
 
 EXPOSE 8000
 
-CMD python manage.py migrate --noinput && python manage.py create_default_user && gunicorn tms_project.wsgi --bind 0.0.0.0:${PORT:-8000} --workers 1 --timeout 120 --log-level info
+CMD python manage.py migrate --noinput && python manage.py create_default_user && exec gunicorn tms_project.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 1 --timeout 60 --preload --log-level debug
