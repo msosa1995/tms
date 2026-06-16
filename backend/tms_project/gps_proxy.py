@@ -95,6 +95,61 @@ def _haversine_km(lat1, lng1, lat2, lng2):
 
 # ── Vistas ────────────────────────────────────────────────────────────────────
 
+@api_view(["POST"])
+@permission_classes([])
+def gps_snapshot(request):
+    """
+    Endpoint llamado por cron externo (cron-job.org) cada 5 minutos.
+    Requiere header X-Cron-Secret con el valor de settings.CRON_SECRET.
+    """
+    import os
+    from tms_project.apps.gps.models import GpsPosicion
+
+    secret = getattr(settings, "CRON_SECRET", os.environ.get("CRON_SECRET", ""))
+    if not secret or request.headers.get("X-Cron-Secret") != secret:
+        return Response({"ok": False, "error": "No autorizado"}, status=403)
+
+    try:
+        session = _get_session()
+        r = session.get(
+            f"{CUSAT_BASE}/objects/list/data?draw=1&start=0&length=100",
+            headers={"Accept": "application/json", "X-Requested-With": "XMLHttpRequest"},
+            timeout=12,
+        )
+        r.raise_for_status()
+        data = r.json()
+
+        dispositivo = "HBK137"
+        raw = next(
+            (obj for obj in data.get("data", []) if dispositivo in str(obj.get("name", ""))),
+            None,
+        )
+        if not raw:
+            return Response({"ok": False, "msg": "HBK137 no encontrado"})
+
+        parsed = _parse_device(raw)
+        if not parsed["lat"]:
+            return Response({"ok": False, "msg": "Sin coordenadas"})
+
+        ultima = GpsPosicion.objects.filter(dispositivo=dispositivo).first()
+        if ultima:
+            dist_m = _haversine_km(ultima.lat, ultima.lng, parsed["lat"], parsed["lng"]) * 1000
+            if dist_m < 50:
+                return Response({"ok": True, "msg": f"Sin movimiento ({dist_m:.0f}m)", "guardado": False})
+
+        GpsPosicion.objects.create(
+            dispositivo=dispositivo,
+            lat=parsed["lat"],
+            lng=parsed["lng"],
+            estado=parsed["estado"],
+        )
+        return Response({"ok": True, "msg": "Posicion guardada", "guardado": True,
+                         "lat": parsed["lat"], "lng": parsed["lng"]})
+
+    except Exception as e:
+        return Response({"ok": False, "error": str(e)}, status=502)
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def gps_posicion(request):
