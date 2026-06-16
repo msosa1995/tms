@@ -47,7 +47,10 @@ export default function Combustible() {
 
   useEffect(() => {
     load();
-    api.get("/gps/estado/").then(r => setGpsEstado(r.data)).catch(() => {});
+    const fetchEstado = () => api.get("/gps/estado/").then(r => setGpsEstado(r.data)).catch(() => {});
+    fetchEstado();
+    const interval = setInterval(fetchEstado, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [load]);
 
   function openNew() { setForm(EMPTY); setModal(true); setError(""); }
