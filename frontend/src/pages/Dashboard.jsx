@@ -122,7 +122,7 @@ export default function Dashboard() {
       </div>
 
       {/* Gráficos */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 16 }}>
         <div className="card" style={{ padding: 20 }}>
           <div style={{ fontWeight: 600, marginBottom: 12, color: "#333" }}>Ingresos vs Gastos (últimos 8 meses)</div>
           <div style={{ position: "relative", height: 280 }}>
@@ -142,7 +142,7 @@ export default function Dashboard() {
         <div style={{ fontWeight: 600, marginBottom: 12, color: "#333" }}>
           Mes actual — {MESES_CORTOS[hoy.getMonth()+1]} {hoy.getFullYear()}
         </div>
-        <div style={{ display: "flex", gap: 32 }}>
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: 12, color: "#888" }}>Ingresos</div>
             <div style={{ fontWeight: 700, color: "#1e8449", fontSize: 18 }}>{fmt(ingMes)}</div>

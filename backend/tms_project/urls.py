@@ -17,6 +17,7 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from tms_project.gps_proxy import gps_posicion
 from tms_project.core.views import (
     UsuarioViewSet, VehiculoViewSet, ChoferViewSet, ClienteViewSet,
     ViajeViewSet, IngresoViewSet, GastoViewSet, MantenimientoViewSet,
@@ -54,6 +55,7 @@ urlpatterns = [
     path("api/v1/", include(router.urls)),
 
     # ——— Autenticación JWT ——————————————————
+    path("api/v1/gps/posicion/", gps_posicion, name="gps_posicion"),
     path("api/v1/auth/token/", UsernameTokenObtainPairView.as_view(), name="token_obtain"),
     path("api/v1/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/v1/auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),

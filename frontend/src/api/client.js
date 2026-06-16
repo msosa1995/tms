@@ -27,13 +27,11 @@ api.interceptors.response.use(
           original.headers.Authorization = `Bearer ${data.access}`;
           return api(original);
         } catch {
-          localStorage.clear();
-          window.location.href = "/login";
+          // refresh expirado — forzar login
         }
-      } else {
-        localStorage.clear();
-        window.location.href = "/login";
       }
+      localStorage.clear();
+      window.location.href = "/login";
     }
     return Promise.reject(error);
   }

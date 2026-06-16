@@ -238,3 +238,42 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 .pagination-btns { display: flex; gap: 6px; }
+
+/* ── Responsive móvil ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Sidebar oculto por defecto en móvil */
+  .sidebar {
+    position: fixed !important;
+    top: 0; left: 0; bottom: 0;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 50;
+  }
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+  }
+  .sidebar-close-btn { display: block !important; }
+  .hamburger-btn     { display: block !important; }
+  .mobile-backdrop   { display: block !important; }
+
+  /* Tablas con scroll horizontal */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  td, th { white-space: nowrap; padding: 8px 10px; font-size: 13px; }
+
+  /* Grillas de 2 columnas → 1 columna */
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Cards con menos padding */
+  .card { padding: 14px; }
+
+  /* Page header apilado en móvil */
+  .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .page-title  { font-size: 18px; }
+
+  /* Barra de búsqueda full width */
+  .search-bar input { max-width: 100%; }
+
+  /* Texto más compacto */
+  body { font-size: 13px; }
+}

@@ -11,57 +11,31 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem("access_token");
     if (token) {
-      fetchMe(token);
+      axios
+        .get(`${API_URL}/v1/usuarios/me/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        .then(({ data }) => setUser(data))
+        .catch(() => localStorage.clear())
+        .finally(() => setLoading(false));
     } else {
-      autoLogin();
+      setLoading(false);
     }
   }, []);
-
-  async function fetchMe(token) {
-    try {
-      const { data } = await axios.get(`${API_URL}/v1/usuarios/me/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUser(data);
-    } catch {
-      localStorage.clear();
-      await autoLogin();
-      return;
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function autoLogin() {
-    try {
-      const { data } = await axios.post(`${API_URL}/v1/auth/token/`, {
-        username: "sosaro",
-        password: "sosaro4x4",
-      });
-      localStorage.setItem("access_token", data.access);
-      localStorage.setItem("refresh_token", data.refresh);
-      const { data: me } = await axios.get(`${API_URL}/v1/usuarios/me/`, {
-        headers: { Authorization: `Bearer ${data.access}` },
-      });
-      setUser(me);
-    } catch {
-      // backend unavailable — show app anyway, API calls will retry
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function login(username, password) {
     const { data } = await axios.post(`${API_URL}/v1/auth/token/`, { username, password });
     localStorage.setItem("access_token", data.access);
     localStorage.setItem("refresh_token", data.refresh);
-    await fetchMe(data.access);
+    const { data: me } = await axios.get(`${API_URL}/v1/usuarios/me/`, {
+      headers: { Authorization: `Bearer ${data.access}` },
+    });
+    setUser(me);
   }
 
   function logout() {
     localStorage.clear();
     setUser(null);
-    autoLogin();
   }
 
   return (

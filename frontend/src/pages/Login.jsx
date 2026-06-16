@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
+const RED = "#c0392b";
+
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -17,12 +19,8 @@ export default function Login() {
     try {
       await login(username, password);
       navigate("/");
-    } catch (err) {
-      setError(
-        err.response?.data?.detail ||
-        err.response?.data?.errors?.detail ||
-        "Credenciales incorrectas"
-      );
+    } catch {
+      setError("Usuario o contraseña incorrectos");
     } finally {
       setLoading(false);
     }
@@ -30,52 +28,124 @@ export default function Login() {
 
   return (
     <div style={{
-      minHeight: "100vh", background: "linear-gradient(135deg, #1a2a3a 0%, #1a5276 100%)",
-      display: "flex", alignItems: "center", justifyContent: "center",
+      minHeight: "100vh",
+      background: "#111820",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
     }}>
       <div style={{
-        background: "#fff", borderRadius: 12, padding: "40px 36px",
-        width: "100%", maxWidth: 400, boxShadow: "0 16px 48px rgba(0,0,0,0.25)",
+        background: "#fff",
+        borderRadius: 12,
+        padding: "40px 36px",
+        width: "100%",
+        maxWidth: 380,
+        boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
       }}>
+        {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 48 }}>&#x1F69B;</div>
-          <h1 style={{ color: "#1a5276", fontWeight: 800, fontSize: 24, marginTop: 8 }}>TMS</h1>
-          <p style={{ color: "#7f8c9a", fontSize: 14, marginTop: 4 }}>Sistema de Gestión de Transporte</p>
+          <div style={{
+            display: "inline-block",
+            background: RED,
+            color: "#fff",
+            fontWeight: 900,
+            fontSize: 28,
+            letterSpacing: 3,
+            padding: "8px 20px",
+            borderRadius: 6,
+            marginBottom: 10,
+          }}>
+            R-SOSA
+          </div>
+          <div style={{ color: "#546e7a", fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase" }}>
+            Soluciones Logísticas
+          </div>
         </div>
 
-        {error && <div className="error-msg">{error}</div>}
+        {error && (
+          <div style={{
+            background: "#fdecea",
+            color: RED,
+            border: `1px solid ${RED}`,
+            borderRadius: 6,
+            padding: "10px 14px",
+            marginBottom: 16,
+            fontSize: 14,
+            textAlign: "center",
+          }}>
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Usuario</label>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontWeight: 600, fontSize: 13, color: "#333", marginBottom: 6 }}>
+              Usuario
+            </label>
             <input
-              type="text" value={username} onChange={(e) => setUsername(e.target.value)}
-              placeholder="sosaro" required autoFocus autoComplete="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="sosaro"
+              required
+              autoFocus
+              autoComplete="username"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                border: "1.5px solid #dce3ec",
+                borderRadius: 7,
+                fontSize: 15,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
             />
           </div>
-          <div className="form-group">
-            <label>Contraseña</label>
+          <div style={{ marginBottom: 24 }}>
+            <label style={{ display: "block", fontWeight: 600, fontSize: 13, color: "#333", marginBottom: 6 }}>
+              Contraseña
+            </label>
             <input
-              type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••" required autoComplete="current-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              autoComplete="current-password"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                border: "1.5px solid #dce3ec",
+                borderRadius: 7,
+                fontSize: 15,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
             />
           </div>
           <button
-            type="submit" disabled={loading}
+            type="submit"
+            disabled={loading}
             style={{
-              width: "100%", padding: "11px", background: "#1a5276", color: "#fff",
-              border: "none", borderRadius: 8, fontWeight: 700, fontSize: 15,
-              cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1,
-              marginTop: 4,
+              width: "100%",
+              padding: 12,
+              background: loading ? "#888" : RED,
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 15,
+              cursor: loading ? "not-allowed" : "pointer",
+              letterSpacing: 0.5,
             }}
           >
             {loading ? "Ingresando..." : "Ingresar"}
           </button>
         </form>
 
-        <p style={{ marginTop: 24, textAlign: "center", color: "#7f8c9a", fontSize: 12 }}>
-          Usuario: sosaro &nbsp;|&nbsp; Contraseña: sosaro4x4
-        </p>
+        <div style={{ marginTop: 28, textAlign: "center", color: "#90a4ae", fontSize: 11 }}>
+          R-SOSA Soluciones Logísticas © {new Date().getFullYear()}
+        </div>
       </div>
     </div>
   );

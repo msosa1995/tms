@@ -1,7 +1,8 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Layout from "./components/Layout";
+import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Vehiculos from "./pages/Vehiculos";
 import Choferes from "./pages/Choferes";
@@ -12,8 +13,28 @@ import Gastos from "./pages/Gastos";
 import Mantenimiento from "./pages/Mantenimiento";
 import Combustible from "./pages/Combustible";
 import Resumen from "./pages/Resumen";
+import Gps from "./pages/Gps";
 
 function AppRoutes() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#f0f2f5", color: "#546e7a", fontSize: 16 }}>
+        Cargando...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
       <Route path="/" element={<Layout />}>
@@ -27,6 +48,7 @@ function AppRoutes() {
         <Route path="mantenimiento" element={<Mantenimiento />} />
         <Route path="combustible" element={<Combustible />} />
         <Route path="resumen" element={<Resumen />} />
+        <Route path="gps" element={<Gps />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
