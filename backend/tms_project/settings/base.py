@@ -75,6 +75,7 @@ ROOT_URLCONF = "tms_project.urls"
 AUTH_USER_MODEL = "accounts.CustomUser"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 DEFAULT_CURRENCY = env("DEFAULT_CURRENCY")
+CRON_SECRET = env("CRON_SECRET", default="")
 
 TEMPLATES = [
     {

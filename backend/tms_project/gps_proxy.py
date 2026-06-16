@@ -104,8 +104,7 @@ def gps_snapshot(request):
     """
     from tms_project.apps.gps.models import GpsPosicion
 
-    import os
-    secret = os.environ.get("CRON_SECRET", "")
+    secret = getattr(settings, "CRON_SECRET", "")
     incoming = request.query_params.get("key", "")
     if not secret or incoming != secret:
         return Response({"ok": False, "error": "No autorizado", "secret_set": bool(secret)}, status=403)
