@@ -1,5 +1,5 @@
 """
-Diagnostico v4: explora la pagina del dispositivo y prueba formatos de fecha
+Diagnostico v5: prueba from_date/from_time y history/export
 Ejecutar: python manage.py explorar_cusat
 """
 import re
@@ -10,71 +10,60 @@ DEVICE_ID = 76194
 
 
 class Command(BaseCommand):
-    help = "Diagnostico v4 endpoint historial Cusat"
+    help = "Diagnostico v5 endpoint historial Cusat"
 
     def handle(self, *args, **kwargs):
         session = _get_session()
         self.stdout.write("Sesion OK\n")
 
-        # ── 1. Visitar pagina follow_map del dispositivo ─────────────────────
-        self.stdout.write("=== GET /devices/follow_map/76194 ===")
-        r = session.get(f"{CUSAT_BASE}/devices/follow_map/{DEVICE_ID}", timeout=12)
-        self.stdout.write(f"Status: {r.status_code}")
-        # Buscar JS con device/history data embebida
-        frags = re.findall(r'.{0,50}(?:device_id|history|positions|date_from|sensor).{0,200}', r.text)
-        for f in frags[:10]:
-            self.stdout.write(f"  {f.replace(chr(10),' ')}")
-
-        # ── 2. Buscar en app.js como se llama history/positions ──────────────
-        self.stdout.write("\n=== app.js: buscar llamada a history/positions ===")
-        rjs = session.get(f"{CUSAT_BASE}/assets/js/app.js?t=1773043745", timeout=12)
-        # Buscar la funcion que llama a history/positions
-        frags2 = re.findall(r'.{0,300}history/positions.{0,300}', rjs.text)
-        for f in frags2[:5]:
-            self.stdout.write(f"  {f.replace(chr(10),' ')}")
-        # Buscar parametros adicionales
-        frags3 = re.findall(r'.{0,100}date_from|date_to|sensor_id|device_id.{0,100}', rjs.text)
-        for f in frags3[:10]:
-            self.stdout.write(f"  {f.replace(chr(10),' ')}")
-
-        # ── 3. Probar /history/positions con POST y distintos formatos ────────
-        self.stdout.write("\n=== POST /history/positions ===")
-
-        # Obtener CSRF token
-        r0 = session.get(f"{CUSAT_BASE}/history", timeout=10)
-        csrf = re.search(r'name="_token"[^>]+value="([^"]+)"', r0.text)
-        csrf_token = csrf.group(1) if csrf else ""
-        self.stdout.write(f"CSRF token: {'OK' if csrf_token else 'NO ENCONTRADO'}")
-
-        post_combos = [
-            {"_token": csrf_token, "device_id": DEVICE_ID, "date_from": "2026-06-15 00:00:00", "date_to": "2026-06-15 23:59:59"},
-            {"_token": csrf_token, "device_id": DEVICE_ID, "date_from": "15/06/2026 00:00", "date_to": "15/06/2026 23:59"},
-            {"_token": csrf_token, "device_id": DEVICE_ID, "date": "2026-06-15"},
-            {"_token": csrf_token, "device_id": DEVICE_ID, "date": "15/06/2026"},
+        # ── 1. GET /history/positions con from_date/from_time ────────────────
+        self.stdout.write("=== GET /history/positions con from_date/from_time ===")
+        combos = [
+            {"device_id": DEVICE_ID, "from_date": "2026-06-15", "from_time": "00:00", "to_date": "2026-06-15", "to_time": "23:59", "draw": 1, "start": 0, "length": 1000},
+            {"device_id": DEVICE_ID, "from_date": "2026-06-15", "from_time": "00:00:00", "to_date": "2026-06-15", "to_time": "23:59:59", "draw": 1, "start": 0, "length": 1000},
+            {"device_id": DEVICE_ID, "from_date": "15/06/2026", "from_time": "00:00", "to_date": "15/06/2026", "to_time": "23:59"},
+            {"device_id": DEVICE_ID, "from_date": "2026-06-15", "from_time": "00:00", "to_date": "2026-06-16", "to_time": "00:00"},
+            # Sin times
+            {"device_id": DEVICE_ID, "from_date": "2026-06-15", "to_date": "2026-06-15", "draw": 1, "start": 0, "length": 1000},
+            # Fecha de ayer por si hoy no tiene datos
+            {"device_id": DEVICE_ID, "from_date": "2026-06-14", "from_time": "00:00", "to_date": "2026-06-14", "to_time": "23:59", "draw": 1, "start": 0, "length": 1000},
         ]
-        for params in post_combos:
-            r = session.post(
-                f"{CUSAT_BASE}/history/positions",
-                data=params,
-                headers={"X-Requested-With": "XMLHttpRequest"},
-                timeout=12,
-            )
-            self.stdout.write(f"\nPOST params={list(params.keys())} date={params.get('date') or params.get('date_from')}")
-            self.stdout.write(f"Status: {r.status_code} | {r.text[:400]}")
-
-        # ── 4. Probar /routes/list ────────────────────────────────────────────
-        self.stdout.write("\n=== /routes/list ===")
-        for params in [
-            {"device_id": DEVICE_ID, "date": "2026-06-15", "draw": 1, "start": 0, "length": 100},
-            {"device_id": DEVICE_ID, "date_from": "2026-06-15", "date_to": "2026-06-15", "draw": 1, "start": 0, "length": 100},
-        ]:
+        for params in combos:
             r = session.get(
-                f"{CUSAT_BASE}/routes/list",
+                f"{CUSAT_BASE}/history/positions",
                 params=params,
                 headers={"Accept": "application/json", "X-Requested-With": "XMLHttpRequest"},
                 timeout=12,
             )
-            self.stdout.write(f"\nGET {params}")
-            self.stdout.write(f"Status: {r.status_code} | {r.text[:400]}")
+            self.stdout.write(f"\nParams: from_date={params.get('from_date')} from_time={params.get('from_time','N/A')}")
+            self.stdout.write(f"Status: {r.status_code} | {r.text[:500]}")
+
+        # ── 2. Visitar /history y extraer estructura del formulario ──────────
+        self.stdout.write("\n=== Formulario en /history ===")
+        r = session.get(f"{CUSAT_BASE}/history", timeout=10)
+        form_frags = re.findall(r'<(?:input|select)[^>]+name="([^"]+)"[^>]*>', r.text)
+        self.stdout.write(f"Campos del formulario: {form_frags}")
+        # Buscar valores por defecto
+        defaults = re.findall(r'name="([^"]+)"[^>]+value="([^"]*)"', r.text)
+        self.stdout.write(f"Valores por defecto: {defaults[:10]}")
+
+        # ── 3. GET /history/export ────────────────────────────────────────────
+        self.stdout.write("\n=== GET /history/export ===")
+        for params in [
+            {"device_id": DEVICE_ID, "from_date": "2026-06-15", "from_time": "00:00", "to_date": "2026-06-15", "to_time": "23:59", "format": "json"},
+            {"device_id": DEVICE_ID, "from_date": "2026-06-15", "from_time": "00:00", "to_date": "2026-06-15", "to_time": "23:59"},
+        ]:
+            r = session.get(f"{CUSAT_BASE}/history/export", params=params, timeout=15)
+            self.stdout.write(f"\nStatus: {r.status_code} | CT: {r.headers.get('Content-Type','')} | {r.text[:400]}")
+
+        # ── 4. GET /history/position (singular) ──────────────────────────────
+        self.stdout.write("\n=== GET /history/position (singular) ===")
+        r = session.get(
+            f"{CUSAT_BASE}/history/position",
+            params={"device_id": DEVICE_ID, "from_date": "2026-06-15", "from_time": "00:00", "to_date": "2026-06-15", "to_time": "23:59"},
+            headers={"Accept": "application/json", "X-Requested-With": "XMLHttpRequest"},
+            timeout=12,
+        )
+        self.stdout.write(f"Status: {r.status_code} | {r.text[:400]}")
 
         self.stdout.write("\nListo.")
