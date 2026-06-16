@@ -13,12 +13,55 @@ function fmtFecha(str) {
   return `${d} ${MESES[parseInt(m)]} ${y}`;
 }
 
-function BarraCombustible({ pct }) {
-  const color = pct > 50 ? "#1e8449" : pct > 25 ? "#e67e22" : "#c0392b";
+function GaugeCombustible({ litros, capacidad = 100 }) {
+  const pct = Math.min(100, Math.max(0, (litros / capacidad) * 100));
+  const cx = 110, cy = 108, r = 80;
+
+  const toRad = p => Math.PI - (p / 100) * Math.PI;
+  const pt = (p, rad = r) => ({
+    x: cx + rad * Math.cos(toRad(p)),
+    y: cy - rad * Math.sin(toRad(p)),
+  });
+  const arc = (p1, p2) => {
+    if (Math.abs(p2 - p1) < 0.1) return "";
+    const s = pt(p1), e = pt(p2);
+    const large = (p2 - p1) > 50 ? 1 : 0;
+    return `M ${s.x.toFixed(2)},${s.y.toFixed(2)} A ${r},${r} 0 ${large},1 ${e.x.toFixed(2)},${e.y.toFixed(2)}`;
+  };
+
+  const color = pct > 50 ? "#27ae60" : pct > 25 ? "#e67e22" : "#c0392b";
+  const needle = pt(pct, r * 0.80);
+  const ePos = pt(0, r + 20);
+  const fPos = pt(100, r + 20);
+
   return (
-    <div style={{ background: "#eee", borderRadius: 20, height: 14, overflow: "hidden", margin: "10px 0 6px" }}>
-      <div style={{ width: `${pct}%`, background: color, height: "100%", borderRadius: 20, transition: "width 0.5s" }} />
-    </div>
+    <svg viewBox="0 0 220 132" width="240" height="144" style={{ display: "block" }}>
+      {/* Zonas de fondo */}
+      <path d={arc(0, 25)}   fill="none" stroke="rgba(192,57,43,0.18)"  strokeWidth="15" />
+      <path d={arc(25, 50)}  fill="none" stroke="rgba(230,126,34,0.18)" strokeWidth="15" />
+      <path d={arc(50, 100)} fill="none" stroke="rgba(39,174,96,0.18)"  strokeWidth="15" />
+      {/* Arco relleno */}
+      {pct > 0 && (
+        <path d={arc(0, pct)} fill="none" stroke={color} strokeWidth="15" strokeLinecap="round" />
+      )}
+      {/* Ticks */}
+      {[0, 25, 50, 75, 100].map(p => {
+        const i = pt(p, r - 9), o = pt(p, r + 5);
+        return <line key={p} x1={i.x.toFixed(1)} y1={i.y.toFixed(1)} x2={o.x.toFixed(1)} y2={o.y.toFixed(1)} stroke="#999" strokeWidth="2" />;
+      })}
+      {/* Etiquetas E y F */}
+      <text x={ePos.x.toFixed(1)} y={(ePos.y + 4).toFixed(1)} textAnchor="middle" fontSize="13" fontWeight="bold" fill="#c0392b">E</text>
+      <text x={fPos.x.toFixed(1)} y={(fPos.y + 4).toFixed(1)} textAnchor="middle" fontSize="13" fontWeight="bold" fill="#27ae60">F</text>
+      {/* Aguja */}
+      <line x1={cx} y1={cy} x2={needle.x.toFixed(2)} y2={needle.y.toFixed(2)} stroke="#e74c3c" strokeWidth="3.5" strokeLinecap="round" />
+      {/* Centro */}
+      <circle cx={cx} cy={cy} r="9" fill="#2c3e50" />
+      <circle cx={cx} cy={cy} r="5" fill="#e74c3c" />
+      {/* Litros */}
+      <text x={cx} y={cy - 26} textAnchor="middle" fontSize="30" fontWeight="800" fill={color}>{Math.round(litros)}</text>
+      <text x={cx} y={cy - 10} textAnchor="middle" fontSize="11" fill="#888">litros restantes</text>
+      <text x={cx} y={cy + 22} textAnchor="middle" fontSize="11" fill="#aaa">{Math.round(pct)}% · tanque {capacidad}L</text>
+    </svg>
   );
 }
 
@@ -110,38 +153,32 @@ export default function Combustible() {
       {/* ── Estado actual desde GPS ───────────────────────────────── */}
       {comb && (
         <div className="card" style={{ marginBottom: 16, borderLeft: "4px solid #2980b9", padding: "18px 20px" }}>
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, color: "#1a5276" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: "#1a5276" }}>
             ⛽ Estado actual — última carga: {fmtFecha(comb.ultima_carga_fecha)}
           </div>
-          <BarraCombustible pct={comb.porcentaje_tanque} />
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px,1fr))", gap: 12, marginTop: 8 }}>
-            <div>
-              <div style={{ fontSize: 11, color: "#888" }}>Cargados</div>
-              <div style={{ fontWeight: 700, fontSize: 18 }}>{comb.litros_cargados} L</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: "#888" }}>Km desde la carga</div>
-              <div style={{ fontWeight: 700, fontSize: 18 }}>{comb.km_desde_carga} km</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: "#888" }}>Consumidos</div>
-              <div style={{ fontWeight: 700, fontSize: 18 }}>{comb.litros_consumidos} L</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: "#888" }}>Restantes estimados</div>
-              <div style={{ fontWeight: 700, fontSize: 18, color: comb.porcentaje_tanque > 25 ? "#1a5276" : "#c0392b" }}>
-                {comb.litros_restantes} L ({comb.porcentaje_tanque}%)
+          <div style={{ display: "flex", gap: 32, alignItems: "center", flexWrap: "wrap" }}>
+            {/* Medidor */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <GaugeCombustible litros={comb.litros_restantes} capacidad={100} />
+              <div style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>
+                Actualización automática cada 5 min
               </div>
             </div>
-            <div>
-              <div style={{ fontSize: 11, color: "#888" }}>Autonomía restante</div>
-              <div style={{ fontWeight: 700, fontSize: 18, color: comb.porcentaje_tanque > 25 ? "#1e8449" : "#c0392b" }}>
-                ~{comb.km_autonomia_restante.toLocaleString("es-PY")} km
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: "#888" }}>Consumo configurado</div>
-              <div style={{ fontWeight: 700, fontSize: 18 }}>{comb.consumo_l_100km} L/100km</div>
+            {/* Stats */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px,1fr))", gap: 14, flex: 1, minWidth: 260 }}>
+              {[
+                { label: "Cargados",           val: `${comb.litros_cargados} L`,             color: "#1a5276" },
+                { label: "Km desde la carga",  val: `${comb.km_desde_carga} km`,             color: "#555" },
+                { label: "Consumidos",         val: `${comb.litros_consumidos} L`,            color: "#e67e22" },
+                { label: "Restantes estimados",val: `${comb.litros_restantes} L`,             color: comb.porcentaje_tanque > 25 ? "#1a5276" : "#c0392b" },
+                { label: "Autonomía restante", val: `~${comb.km_autonomia_restante.toLocaleString("es-PY")} km`, color: comb.porcentaje_tanque > 25 ? "#1e8449" : "#c0392b" },
+                { label: "Consumo",            val: `${comb.consumo_l_100km} L/100km`,       color: "#555" },
+              ].map(({ label, val, color }) => (
+                <div key={label}>
+                  <div style={{ fontSize: 11, color: "#888" }}>{label}</div>
+                  <div style={{ fontWeight: 700, fontSize: 18, color }}>{val}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

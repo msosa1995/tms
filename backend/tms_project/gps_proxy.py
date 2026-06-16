@@ -289,11 +289,12 @@ def gps_estado(request):
                           pos_carga[i]["lat"],     pos_carga[i]["lng"])
             for i in range(1, len(pos_carga))
         )
+        TANQUE_L        = 100.0  # capacidad real del tanque HBK137
         litros          = float(ultima_carga.litros)
         consumidos      = km_desde_carga * (config.consumo_l_100km / 100)
         restantes       = max(0.0, litros - consumidos)
         km_autonomia    = restantes * (100 / config.consumo_l_100km)
-        porcentaje      = round(restantes / litros * 100) if litros > 0 else 0
+        porcentaje      = round(restantes / TANQUE_L * 100)
 
         combustible = {
             "ultima_carga_fecha":    str(ultima_carga.fecha),
