@@ -52,6 +52,7 @@ LOCAL_APPS = [
     "tms_project.apps.auditoria",
     "tms_project.apps.reportes",
     "tms_project.apps.analytics",
+    "tms_project.apps.gps",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
