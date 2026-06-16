@@ -8,9 +8,24 @@ from datetime import date, datetime, time, timedelta
 
 import pytz
 from django.core.management.base import BaseCommand
+from django.db import connection
 
 from tms_project.gps_proxy import CUSAT_BASE, _get_session
 from tms_project.apps.gps.models import GpsPosicion
+
+
+def _raw_insert(objs):
+    """INSERT directo via SQL para respetar timestamps históricos (Django bulk_create los sobreescribe)."""
+    if not objs:
+        return
+    rows = [(o.dispositivo, o.lat, o.lng, o.estado, o.timestamp) for o in objs]
+    placeholders = ",".join(["(%s,%s,%s,%s,%s)"] * len(rows))
+    flat = [v for row in rows for v in row]
+    with connection.cursor() as cur:
+        cur.execute(
+            f"INSERT INTO gps_gpsposicion (dispositivo, lat, lng, estado, timestamp) VALUES {placeholders}",
+            flat,
+        )
 
 DEVICE_ID    = 76194
 DISPOSITIVO  = "HBK137"
@@ -123,7 +138,7 @@ class Command(BaseCommand):
 
             # Flush each 500 records to avoid memory issues
             if len(bulk) >= 500:
-                GpsPosicion.objects.bulk_create(bulk, ignore_conflicts=True)
+                _raw_insert(bulk)
                 bulk = []
 
             total_p += dia_p
@@ -135,7 +150,7 @@ class Command(BaseCommand):
             fecha += timedelta(days=1)
 
         if bulk:
-            GpsPosicion.objects.bulk_create(bulk, ignore_conflicts=True)
+            _raw_insert(bulk)
 
         self.stdout.write(self.style.SUCCESS(
             f"\nImportacion completa: {total_p} puntos guardados | {total_k:.1f} km acumulados"
