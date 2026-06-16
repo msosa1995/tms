@@ -106,10 +106,9 @@ def gps_snapshot(request):
 
     import os
     secret = os.environ.get("CRON_SECRET", "")
-    incoming = (request.META.get("HTTP_X_CRON_SECRET") or
-                request.headers.get("X-Cron-Secret") or "")
+    incoming = request.query_params.get("key", "")
     if not secret or incoming != secret:
-        return Response({"ok": False, "error": "No autorizado"}, status=403)
+        return Response({"ok": False, "error": "No autorizado", "secret_set": bool(secret)}, status=403)
 
     try:
         session = _get_session()
