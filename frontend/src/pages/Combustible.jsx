@@ -22,6 +22,19 @@ function BarraCombustible({ pct }) {
   );
 }
 
+function AlertaCombustible({ km }) {
+  if (km === undefined || km === null) return null;
+  if (km >= 100) return null;
+  const cfg = km < 60
+    ? { bg: "#fadbd8", borde: "#c0392b", text: "#922b21", icono: "🔴", msg: `¡Combustible crítico! Solo quedan ~${km} km de autonomía — cargá cuanto antes` }
+    : { bg: "#fef9e7", borde: "#f1c40f", text: "#7d6608", icono: "🟡", msg: `Combustible bajo — quedan ~${km} km de autonomía` };
+  return (
+    <div style={{ background: cfg.bg, borderLeft: `4px solid ${cfg.borde}`, color: cfg.text, borderRadius: 8, padding: "12px 16px", marginBottom: 16, fontWeight: 600, fontSize: 14 }}>
+      {cfg.icono} {cfg.msg}
+    </div>
+  );
+}
+
 const EMPTY = { fecha: new Date().toISOString().slice(0, 10), litros: "", monto: "", observaciones: "" };
 
 export default function Combustible() {
@@ -90,6 +103,9 @@ export default function Combustible() {
         <h2 className="page-title">Combustible</h2>
         <button className="btn btn-primary" onClick={openNew}>+ Registrar Carga</button>
       </div>
+
+      {/* ── Alerta autonomía ─────────────────────────────────────── */}
+      {comb && <AlertaCombustible km={comb.km_autonomia_restante} />}
 
       {/* ── Estado actual desde GPS ───────────────────────────────── */}
       {comb && (
