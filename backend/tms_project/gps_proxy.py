@@ -275,7 +275,7 @@ def gps_estado(request):
         alerta_mant = "ok"
 
     # ── Combustible ───────────────────────────────────────────────────────────
-    ultima_carga = CargaCombustible.objects.first()  # ordenado por -fecha
+    ultima_carga = CargaCombustible.objects.order_by("-fecha").first()
     combustible = None
     if ultima_carga:
         inicio = TZ_LOCAL.localize(datetime.combine(ultima_carga.fecha, time.min))
