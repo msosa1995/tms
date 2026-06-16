@@ -210,6 +210,8 @@ export default function Gps() {
         </div>
       )}
 
+      {/* ── Otros vehículos (oculto — no son del usuario) ── */}
+
       {/* ── Historial de km ── */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>

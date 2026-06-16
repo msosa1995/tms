@@ -158,7 +158,10 @@ def gps_posicion(request):
         )
         r.raise_for_status()
         data = r.json()
-        dispositivos = [_parse_device(obj) for obj in data.get("data", [])]
+        dispositivos = [
+            _parse_device(obj) for obj in data.get("data", [])
+            if "HBK137" in str(obj.get("name", ""))
+        ]
         return Response({"ok": True, "dispositivos": dispositivos})
     except Exception as e:
         return Response({"ok": False, "error": str(e)}, status=502)
