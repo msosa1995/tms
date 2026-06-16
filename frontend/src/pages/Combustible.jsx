@@ -14,53 +14,99 @@ function fmtFecha(str) {
 }
 
 function GaugeCombustible({ litros, capacidad = 100 }) {
-  const pct = Math.min(100, Math.max(0, (litros / capacidad) * 100));
-  const cx = 110, cy = 108, r = 80;
+  const pct = Math.min(100, Math.max(0, litros / capacidad * 100));
+  const cx = 140, cy = 138, r = 95;
 
-  const toRad = p => Math.PI - (p / 100) * Math.PI;
-  const pt = (p, rad = r) => ({
-    x: cx + rad * Math.cos(toRad(p)),
-    y: cy - rad * Math.sin(toRad(p)),
+  // 0% = 135° SVG, 100% = 405° SVG (270° sweep CW en pantalla)
+  const degSVG = p => (135 + (p / 100) * 270) * Math.PI / 180;
+  const pt = (p, radius = r) => ({
+    x: cx + radius * Math.cos(degSVG(p)),
+    y: cy + radius * Math.sin(degSVG(p)),
   });
-  const arc = (p1, p2) => {
-    if (Math.abs(p2 - p1) < 0.1) return "";
-    const s = pt(p1), e = pt(p2);
-    const large = (p2 - p1) > 50 ? 1 : 0;
-    return `M ${s.x.toFixed(2)},${s.y.toFixed(2)} A ${r},${r} 0 ${large},1 ${e.x.toFixed(2)},${e.y.toFixed(2)}`;
+  const arc = (p1, p2, radius = r) => {
+    const s = pt(p1, radius), e = pt(p2, radius);
+    const sweep = (p2 - p1) / 100 * 270;
+    return `M ${s.x.toFixed(2)},${s.y.toFixed(2)} A ${radius},${radius} 0 ${sweep > 180 ? 1 : 0},1 ${e.x.toFixed(2)},${e.y.toFixed(2)}`;
   };
 
-  const color = pct > 50 ? "#27ae60" : pct > 25 ? "#e67e22" : "#c0392b";
-  const needle = pt(pct, r * 0.80);
-  const ePos = pt(0, r + 20);
-  const fPos = pt(100, r + 20);
+  const color   = pct > 50 ? "#22c55e" : pct > 25 ? "#f59e0b" : "#ef4444";
+  const needle  = pt(pct, r * 0.76);
+  const ePos    = pt(0,   r + 22);
+  const fPos    = pt(100, r + 22);
 
   return (
-    <svg viewBox="0 0 220 132" width="240" height="144" style={{ display: "block" }}>
+    <svg viewBox="0 0 280 228" width="300" height="243" style={{ display: "block" }}>
+      <defs>
+        <filter id="cg">
+          <feGaussianBlur stdDeviation="4" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <radialGradient id="hub" cx="35%" cy="35%">
+          <stop offset="0%" stopColor="#94a3b8"/>
+          <stop offset="100%" stopColor="#1e293b"/>
+        </radialGradient>
+      </defs>
+
+      {/* Panel oscuro */}
+      <rect width="280" height="228" rx="18" fill="#0f172a"/>
+
+      {/* Bisel exterior */}
+      <circle cx={cx} cy={cy} r={r+20} fill="none" stroke="#1e293b" strokeWidth="20"/>
+      <circle cx={cx} cy={cy} r={r+10} fill="none" stroke="#334155" strokeWidth="1.5"/>
+
       {/* Zonas de fondo */}
-      <path d={arc(0, 25)}   fill="none" stroke="rgba(192,57,43,0.18)"  strokeWidth="15" />
-      <path d={arc(25, 50)}  fill="none" stroke="rgba(230,126,34,0.18)" strokeWidth="15" />
-      <path d={arc(50, 100)} fill="none" stroke="rgba(39,174,96,0.18)"  strokeWidth="15" />
-      {/* Arco relleno */}
-      {pct > 0 && (
-        <path d={arc(0, pct)} fill="none" stroke={color} strokeWidth="15" strokeLinecap="round" />
+      <path d={arc(0,  25)}  fill="none" stroke="#450a0a" strokeWidth="17" strokeLinecap="butt"/>
+      <path d={arc(25, 50)}  fill="none" stroke="#431407" strokeWidth="17" strokeLinecap="butt"/>
+      <path d={arc(50,100)}  fill="none" stroke="#052e16" strokeWidth="17" strokeLinecap="butt"/>
+
+      {/* Arco activo con glow */}
+      {pct > 0.5 && (
+        <path d={arc(0, pct)} fill="none" stroke={color} strokeWidth="17"
+          strokeLinecap="butt" filter="url(#cg)" opacity="0.95"/>
       )}
-      {/* Ticks */}
+
+      {/* Ticks principales */}
       {[0, 25, 50, 75, 100].map(p => {
-        const i = pt(p, r - 9), o = pt(p, r + 5);
-        return <line key={p} x1={i.x.toFixed(1)} y1={i.y.toFixed(1)} x2={o.x.toFixed(1)} y2={o.y.toFixed(1)} stroke="#999" strokeWidth="2" />;
+        const i = pt(p, r-12), o = pt(p, r+12);
+        return <line key={p} x1={i.x.toFixed(1)} y1={i.y.toFixed(1)}
+          x2={o.x.toFixed(1)} y2={o.y.toFixed(1)} stroke="#cbd5e1" strokeWidth="2.5"/>;
       })}
+      {/* Ticks menores */}
+      {[10,20,30,40,60,70,80,90].map(p => {
+        const i = pt(p, r-7), o = pt(p, r+7);
+        return <line key={p} x1={i.x.toFixed(1)} y1={i.y.toFixed(1)}
+          x2={o.x.toFixed(1)} y2={o.y.toFixed(1)} stroke="#475569" strokeWidth="1.5"/>;
+      })}
+
       {/* Etiquetas E y F */}
-      <text x={ePos.x.toFixed(1)} y={(ePos.y + 4).toFixed(1)} textAnchor="middle" fontSize="13" fontWeight="bold" fill="#c0392b">E</text>
-      <text x={fPos.x.toFixed(1)} y={(fPos.y + 4).toFixed(1)} textAnchor="middle" fontSize="13" fontWeight="bold" fill="#27ae60">F</text>
+      <text x={ePos.x.toFixed(1)} y={(ePos.y+5).toFixed(1)}
+        textAnchor="middle" fontSize="17" fontWeight="900" fill="#ef4444">E</text>
+      <text x={fPos.x.toFixed(1)} y={(fPos.y+5).toFixed(1)}
+        textAnchor="middle" fontSize="17" fontWeight="900" fill="#22c55e">F</text>
+
+      {/* Icono combustible */}
+      <text x="28" y="52" fontSize="22" fill="#334155">⛽</text>
+
+      {/* Sombra aguja */}
+      <line x1={cx} y1={cy} x2={(needle.x+2).toFixed(1)} y2={(needle.y+2).toFixed(1)}
+        stroke="rgba(0,0,0,0.4)" strokeWidth="4" strokeLinecap="round"/>
       {/* Aguja */}
-      <line x1={cx} y1={cy} x2={needle.x.toFixed(2)} y2={needle.y.toFixed(2)} stroke="#e74c3c" strokeWidth="3.5" strokeLinecap="round" />
-      {/* Centro */}
-      <circle cx={cx} cy={cy} r="9" fill="#2c3e50" />
-      <circle cx={cx} cy={cy} r="5" fill="#e74c3c" />
-      {/* Litros */}
-      <text x={cx} y={cy - 26} textAnchor="middle" fontSize="30" fontWeight="800" fill={color}>{Math.round(litros)}</text>
-      <text x={cx} y={cy - 10} textAnchor="middle" fontSize="11" fill="#888">litros restantes</text>
-      <text x={cx} y={cy + 22} textAnchor="middle" fontSize="11" fill="#aaa">{Math.round(pct)}% · tanque {capacidad}L</text>
+      <line x1={cx} y1={cy} x2={needle.x.toFixed(1)} y2={needle.y.toFixed(1)}
+        stroke="#f1f5f9" strokeWidth="3" strokeLinecap="round" filter="url(#cg)"/>
+
+      {/* Centro del cuadrante */}
+      <circle cx={cx} cy={cy} r="15" fill="#0f172a"/>
+      <circle cx={cx} cy={cy} r="12" fill="url(#hub)"/>
+      <circle cx={cx} cy={cy} r="5"  fill="#e2e8f0"/>
+
+      {/* Display digital */}
+      <text x={cx} y={cy-36} textAnchor="middle" fontSize="40" fontWeight="900"
+        fill={color} filter="url(#cg)" fontFamily="monospace">{Math.round(litros)}</text>
+      <text x={cx} y={cy-17} textAnchor="middle" fontSize="11"
+        fill="#64748b" letterSpacing="3" fontFamily="monospace">LITROS</text>
+      <text x={cx} y={cy+28} textAnchor="middle" fontSize="11" fill="#475569">
+        {Math.round(pct)}%  ·  tanque {capacidad}L
+      </text>
     </svg>
   );
 }
