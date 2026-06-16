@@ -95,7 +95,7 @@ def _haversine_km(lat1, lng1, lat2, lng2):
 
 # ── Vistas ────────────────────────────────────────────────────────────────────
 
-@api_view(["POST"])
+@api_view(["GET", "POST"])
 @permission_classes([])
 def gps_snapshot(request):
     """
