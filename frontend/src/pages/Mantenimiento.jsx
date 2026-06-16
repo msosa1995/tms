@@ -10,6 +10,49 @@ const TIPO_BADGE = { preventivo:"badge-blue", correctivo:"badge-red", predictivo
 
 const EMPTY = { vehiculo: "", tipo: "preventivo", descripcion: "", fecha: new Date().toISOString().slice(0,10), kilometraje: "", proveedor: "", costo: "", numero_orden: "", proximo_mantenimiento_fecha: "", proximo_mantenimiento_km: "", observaciones: "" };
 
+function AlertaGPS({ mant, odo }) {
+  if (!mant || !odo) return null;
+  const cfg = {
+    vencido: { bg: "#c0392b", text: "#fff",    borde: "#922b21", msg: "¡VENCIDO! Realizar mantenimiento inmediatamente" },
+    urgente: { bg: "#e74c3c", text: "#fff",    borde: "#c0392b", msg: `Quedan solo ${mant.km_hasta.toLocaleString("es-PY")} km para el próximo mantenimiento` },
+    proximo: { bg: "#fef9e7", text: "#7d6608", borde: "#f1c40f", msg: `Próximo mantenimiento en ${mant.km_hasta.toLocaleString("es-PY")} km` },
+    ok:      { bg: "#d5f5e3", text: "#1e8449", borde: "#27ae60", msg: `Mantenimiento al día — faltan ${mant.km_hasta.toLocaleString("es-PY")} km` },
+  };
+  const s = cfg[mant.alerta] || cfg.ok;
+  return (
+    <div style={{ background: s.bg, color: s.text, borderLeft: `4px solid ${s.borde}`, borderRadius: 8, padding: "14px 18px", marginBottom: 16 }}>
+      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>
+        🔧 Estado del vehículo HBK137
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 11, opacity: 0.75 }}>Odómetro actual (GPS)</div>
+          <div style={{ fontWeight: 800, fontSize: 20 }}>{odo.actual_km.toLocaleString("es-PY")} km</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, opacity: 0.75 }}>Próximo mantenimiento</div>
+          <div style={{ fontWeight: 800, fontSize: 20 }}>
+            {mant.km_hasta <= 0 ? "VENCIDO" : `en ${mant.km_hasta.toLocaleString("es-PY")} km`}
+          </div>
+          <div style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}>a los {mant.proximo_km.toLocaleString("es-PY")} km</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, opacity: 0.75 }}>Último mantenimiento</div>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>a los {mant.ultimo_km.toLocaleString("es-PY")} km</div>
+          <div style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}>{mant.descripcion}</div>
+        </div>
+      </div>
+      <div style={{ marginTop: 12, fontWeight: 600, fontSize: 13 }}>{msg(mant.alerta, mant.km_hasta)}</div>
+    </div>
+  );
+  function msg(alerta, km) {
+    if (alerta === "vencido") return "⛔ " + cfg.vencido.msg;
+    if (alerta === "urgente") return "⚠️ " + cfg.urgente.msg;
+    if (alerta === "proximo") return "🔔 " + cfg.proximo.msg;
+    return "✅ " + cfg.ok.msg;
+  }
+}
+
 export default function Mantenimiento() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,6 +61,7 @@ export default function Mantenimiento() {
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [gpsEstado, setGpsEstado] = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -25,11 +69,11 @@ export default function Mantenimiento() {
       .then(r => setItems(r.data.results || r.data)).finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { load(); }, [load]);
-
   useEffect(() => {
+    load();
     api.get("/vehiculos/", { params: { page_size: 200 } }).then(r => setVehiculos(r.data.results || r.data));
-  }, []);
+    api.get("/gps/estado/").then(r => setGpsEstado(r.data)).catch(() => {});
+  }, [load]);
 
   function openNew() { setForm(EMPTY); setModal(true); setError(""); }
   function closeModal() { setModal(false); setError(""); }
@@ -54,6 +98,8 @@ export default function Mantenimiento() {
         <h2 className="page-title">Mantenimiento</h2>
         <button className="btn btn-primary" onClick={openNew}>+ Registrar Mantenimiento</button>
       </div>
+
+      <AlertaGPS mant={gpsEstado?.mantenimiento} odo={gpsEstado?.odometro} />
 
       <div className="card">
         <div className="table-wrap">

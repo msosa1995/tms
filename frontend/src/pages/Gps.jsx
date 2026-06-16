@@ -138,9 +138,6 @@ export default function Gps() {
         </div>
       )}
 
-      {/* ── Alerta mantenimiento ── */}
-      {mant && <AlertaMant mant={mant} />}
-
       {/* ── Panel de control ── */}
       {estado && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 12, marginBottom: 16 }}>
@@ -150,13 +147,6 @@ export default function Gps() {
             sub={`${odo.km_gps_acumulado} km registrados por GPS`}
             color="#1a5276"
             icon="📍"
-          />
-          <KpiCard
-            label="Próximo mantenimiento"
-            value={mant.km_hasta <= 0 ? "VENCIDO" : `${mant.km_hasta.toLocaleString("es-PY")} km`}
-            sub={`A los ${mant.proximo_km.toLocaleString("es-PY")} km · ${mant.descripcion}`}
-            color={mant.alerta === "ok" ? "#1e8449" : mant.alerta === "proximo" ? "#9a7d0a" : "#c0392b"}
-            icon="🔧"
           />
           {comb && (
             <KpiCard
