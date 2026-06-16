@@ -40,7 +40,7 @@ function AlertaMant({ mant }) {
   const cfg = {
     vencido: { bg: "#c0392b", text: "#fff",    icon: "🚨", msg: "¡VENCIDO! Realizar mantenimiento inmediatamente" },
     urgente: { bg: "#e74c3c", text: "#fff",    icon: "⚠️", msg: `Quedan solo ${mant.km_hasta} km — hacé el mantenimiento pronto` },
-    proximo: { bg: "#e67e22", text: "#fff",    icon: "🔔", msg: `Próximo mantenimiento en ${mant.km_hasta} km` },
+    proximo: { bg: "#f1c40f", text: "#7d6608", icon: "🔔", msg: `Próximo mantenimiento en ${mant.km_hasta} km` },
     ok:      { bg: "#d5f5e3", text: "#1e8449", icon: "✅", msg: `Mantenimiento al día — faltan ${mant.km_hasta} km` },
   };
   const s = cfg[mant.alerta] || cfg.ok;
@@ -155,7 +155,7 @@ export default function Gps() {
             label="Próximo mantenimiento"
             value={mant.km_hasta <= 0 ? "VENCIDO" : `${mant.km_hasta.toLocaleString("es-PY")} km`}
             sub={`A los ${mant.proximo_km.toLocaleString("es-PY")} km · ${mant.descripcion}`}
-            color={mant.alerta === "ok" ? "#1e8449" : mant.alerta === "proximo" ? "#e67e22" : "#c0392b"}
+            color={mant.alerta === "ok" ? "#1e8449" : mant.alerta === "proximo" ? "#9a7d0a" : "#c0392b"}
             icon="🔧"
           />
           {comb && (

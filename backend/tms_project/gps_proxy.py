@@ -269,7 +269,7 @@ def gps_estado(request):
         alerta_mant = "vencido"
     elif km_hasta_mant <= 500:
         alerta_mant = "urgente"
-    elif km_hasta_mant <= 1500:
+    elif km_hasta_mant <= 1000:
         alerta_mant = "proximo"
     else:
         alerta_mant = "ok"
