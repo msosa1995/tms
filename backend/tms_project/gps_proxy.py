@@ -100,13 +100,15 @@ def _haversine_km(lat1, lng1, lat2, lng2):
 def gps_snapshot(request):
     """
     Endpoint llamado por cron externo (cron-job.org) cada 5 minutos.
-    Requiere header X-Cron-Secret con el valor de settings.CRON_SECRET.
+    Requiere header X-Cron-Secret con el valor de la variable CRON_SECRET.
     """
-    import os
     from tms_project.apps.gps.models import GpsPosicion
 
-    secret = getattr(settings, "CRON_SECRET", os.environ.get("CRON_SECRET", ""))
-    if not secret or request.headers.get("X-Cron-Secret") != secret:
+    import os
+    secret = os.environ.get("CRON_SECRET", "")
+    incoming = (request.META.get("HTTP_X_CRON_SECRET") or
+                request.headers.get("X-Cron-Secret") or "")
+    if not secret or incoming != secret:
         return Response({"ok": False, "error": "No autorizado"}, status=403)
 
     try:
