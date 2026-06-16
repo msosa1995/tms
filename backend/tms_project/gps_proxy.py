@@ -225,6 +225,103 @@ def gps_resumen_diario(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+def gps_estado(request):
+    """
+    Panel de control: odómetro actual, alerta de mantenimiento y autonomía de combustible.
+    """
+    from datetime import datetime, time
+    from django.utils import timezone
+    from tms_project.apps.gps.models import GpsPosicion, ConfiguracionVehiculo
+    from tms_project.apps.ingresos.models import CargaCombustible
+
+    dispositivo = "HBK137"
+
+    config, _ = ConfiguracionVehiculo.objects.get_or_create(
+        dispositivo=dispositivo,
+        defaults={
+            "odometro_base_km": 104050,
+            "km_ultimo_mantenimiento": 100000,
+            "intervalo_mantenimiento_km": 5000,
+            "descripcion_mantenimiento": "Cambio de aceite y filtros",
+            "consumo_l_100km": 25.0,
+        },
+    )
+
+    # ── Odómetro ─────────────────────────────────────────────────────────────
+    posiciones = list(
+        GpsPosicion.objects.filter(dispositivo=dispositivo)
+        .order_by("timestamp")
+        .values("lat", "lng", "timestamp")
+    )
+    km_gps = sum(
+        _haversine_km(posiciones[i - 1]["lat"], posiciones[i - 1]["lng"],
+                      posiciones[i]["lat"],     posiciones[i]["lng"])
+        for i in range(1, len(posiciones))
+    )
+    odometro_actual   = config.odometro_base_km + km_gps
+    km_proximo_mant   = config.km_ultimo_mantenimiento + config.intervalo_mantenimiento_km
+    km_hasta_mant     = km_proximo_mant - odometro_actual
+
+    if km_hasta_mant <= 0:
+        alerta_mant = "vencido"
+    elif km_hasta_mant <= 500:
+        alerta_mant = "urgente"
+    elif km_hasta_mant <= 1500:
+        alerta_mant = "proximo"
+    else:
+        alerta_mant = "ok"
+
+    # ── Combustible ───────────────────────────────────────────────────────────
+    ultima_carga = CargaCombustible.objects.first()  # ordenado por -fecha
+    combustible = None
+    if ultima_carga:
+        inicio = TZ_LOCAL.localize(datetime.combine(ultima_carga.fecha, time.min))
+        pos_carga = list(
+            GpsPosicion.objects.filter(dispositivo=dispositivo, timestamp__gte=inicio)
+            .order_by("timestamp")
+            .values("lat", "lng")
+        )
+        km_desde_carga = sum(
+            _haversine_km(pos_carga[i - 1]["lat"], pos_carga[i - 1]["lng"],
+                          pos_carga[i]["lat"],     pos_carga[i]["lng"])
+            for i in range(1, len(pos_carga))
+        )
+        litros          = float(ultima_carga.litros)
+        consumidos      = km_desde_carga * (config.consumo_l_100km / 100)
+        restantes       = max(0.0, litros - consumidos)
+        km_autonomia    = restantes * (100 / config.consumo_l_100km)
+        porcentaje      = round(restantes / litros * 100) if litros > 0 else 0
+
+        combustible = {
+            "ultima_carga_fecha":    str(ultima_carga.fecha),
+            "litros_cargados":       litros,
+            "km_desde_carga":        round(km_desde_carga, 1),
+            "litros_consumidos":     round(consumidos, 1),
+            "litros_restantes":      round(restantes, 1),
+            "km_autonomia_restante": round(km_autonomia),
+            "porcentaje_tanque":     porcentaje,
+            "consumo_l_100km":       config.consumo_l_100km,
+        }
+
+    return Response({
+        "ok": True,
+        "odometro": {
+            "actual_km":        round(odometro_actual),
+            "km_gps_acumulado": round(km_gps, 1),
+        },
+        "mantenimiento": {
+            "descripcion":  config.descripcion_mantenimiento,
+            "ultimo_km":    config.km_ultimo_mantenimiento,
+            "proximo_km":   km_proximo_mant,
+            "km_hasta":     round(km_hasta_mant),
+            "alerta":       alerta_mant,
+        },
+        "combustible": combustible,
+    })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def gps_posiciones_fecha(request):
     """
     Todas las posiciones registradas en una fecha.

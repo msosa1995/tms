@@ -17,7 +17,7 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
-from tms_project.gps_proxy import gps_posicion, gps_resumen_diario, gps_posiciones_fecha, gps_snapshot
+from tms_project.gps_proxy import gps_posicion, gps_resumen_diario, gps_posiciones_fecha, gps_snapshot, gps_estado
 from tms_project.core.views import (
     UsuarioViewSet, VehiculoViewSet, ChoferViewSet, ClienteViewSet,
     ViajeViewSet, IngresoViewSet, GastoViewSet, MantenimientoViewSet,
@@ -59,6 +59,7 @@ urlpatterns = [
     path("api/v1/gps/resumen/",        gps_resumen_diario,  name="gps_resumen"),
     path("api/v1/gps/posiciones/",     gps_posiciones_fecha, name="gps_posiciones"),
     path("api/v1/gps/snapshot/",       gps_snapshot,         name="gps_snapshot"),
+    path("api/v1/gps/estado/",         gps_estado,           name="gps_estado"),
     path("api/v1/auth/token/", UsernameTokenObtainPairView.as_view(), name="token_obtain"),
     path("api/v1/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/v1/auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
