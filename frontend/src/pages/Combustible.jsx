@@ -5,23 +5,35 @@ import api from "../api/client";
 import Modal from "../components/Modal";
 
 function fmt(n) { return n ? "₲ " + Number(n).toLocaleString("es-PY") : "₲ 0"; }
-function fmtKm(n) { return Number(n).toLocaleString("es-PY", { maximumFractionDigits: 0 }) + " km"; }
 
-// Consumo: sin carga = 10L/40km, con carga = 15L/40km
-const KM_POR_LITRO_SIN_CARGA = 40 / 10;   // 4 km/L
-const KM_POR_LITRO_CON_CARGA = 40 / 15;   // 2.67 km/L
+const MESES = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+function fmtFecha(str) {
+  if (!str) return "—";
+  const [y, m, d] = str.split("-");
+  return `${d} ${MESES[parseInt(m)]} ${y}`;
+}
+
+function BarraCombustible({ pct }) {
+  const color = pct > 50 ? "#1e8449" : pct > 25 ? "#e67e22" : "#c0392b";
+  return (
+    <div style={{ background: "#eee", borderRadius: 20, height: 14, overflow: "hidden", margin: "10px 0 6px" }}>
+      <div style={{ width: `${pct}%`, background: color, height: "100%", borderRadius: 20, transition: "width 0.5s" }} />
+    </div>
+  );
+}
 
 const EMPTY = { fecha: new Date().toISOString().slice(0, 10), litros: "", monto: "", observaciones: "" };
 
 export default function Combustible() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(false);
-  const [form, setForm] = useState(EMPTY);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [items, setItems]       = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [modal, setModal]       = useState(false);
+  const [form, setForm]         = useState(EMPTY);
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState("");
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
+  const [gpsEstado, setGpsEstado]   = useState(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -33,7 +45,10 @@ export default function Combustible() {
       .finally(() => setLoading(false));
   }, [fechaDesde, fechaHasta]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    api.get("/gps/estado/").then(r => setGpsEstado(r.data)).catch(() => {});
+  }, [load]);
 
   function openNew() { setForm(EMPTY); setModal(true); setError(""); }
   function closeModal() { setModal(false); setError(""); }
@@ -43,6 +58,7 @@ export default function Combustible() {
     try {
       await api.post("/combustible/", form);
       closeModal(); load();
+      api.get("/gps/estado/").then(r => setGpsEstado(r.data)).catch(() => {});
     } catch (e) {
       const d = e.response?.data;
       setError(typeof d === "string" ? d : JSON.stringify(d));
@@ -56,15 +72,14 @@ export default function Combustible() {
   }
 
   const totalLitros = items.reduce((s, i) => s + Number(i.litros || 0), 0);
-  const totalMonto = items.reduce((s, i) => s + Number(i.monto || 0), 0);
-  const precioProm = totalLitros > 0 ? Math.round(totalMonto / totalLitros) : 0;
-  const autonomiaSinCarga = totalLitros * KM_POR_LITRO_SIN_CARGA;
-  const autonomiaConCarga = totalLitros * KM_POR_LITRO_CON_CARGA;
+  const totalMonto  = items.reduce((s, i) => s + Number(i.monto || 0), 0);
+  const precioProm  = totalLitros > 0 ? Math.round(totalMonto / totalLitros) : 0;
 
-  // Autonomía para el formulario (preview en tiempo real)
-  const litrosForm = Number(form.litros) || 0;
-  const previewSin = litrosForm * KM_POR_LITRO_SIN_CARGA;
-  const previewCon = litrosForm * KM_POR_LITRO_CON_CARGA;
+  const comb = gpsEstado?.combustible;
+
+  const litrosForm  = Number(form.litros) || 0;
+  const montoForm   = Number(form.monto) || 0;
+  const precioPreview = litrosForm > 0 && montoForm > 0 ? Math.round(montoForm / litrosForm) : 0;
 
   return (
     <div>
@@ -73,7 +88,47 @@ export default function Combustible() {
         <button className="btn btn-primary" onClick={openNew}>+ Registrar Carga</button>
       </div>
 
-      {/* Resumen */}
+      {/* ── Estado actual desde GPS ───────────────────────────────── */}
+      {comb && (
+        <div className="card" style={{ marginBottom: 16, borderLeft: "4px solid #2980b9", padding: "18px 20px" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, color: "#1a5276" }}>
+            ⛽ Estado actual — última carga: {fmtFecha(comb.ultima_carga_fecha)}
+          </div>
+          <BarraCombustible pct={comb.porcentaje_tanque} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px,1fr))", gap: 12, marginTop: 8 }}>
+            <div>
+              <div style={{ fontSize: 11, color: "#888" }}>Cargados</div>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>{comb.litros_cargados} L</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#888" }}>Km desde la carga</div>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>{comb.km_desde_carga} km</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#888" }}>Consumidos</div>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>{comb.litros_consumidos} L</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#888" }}>Restantes estimados</div>
+              <div style={{ fontWeight: 700, fontSize: 18, color: comb.porcentaje_tanque > 25 ? "#1a5276" : "#c0392b" }}>
+                {comb.litros_restantes} L ({comb.porcentaje_tanque}%)
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#888" }}>Autonomía restante</div>
+              <div style={{ fontWeight: 700, fontSize: 18, color: comb.porcentaje_tanque > 25 ? "#1e8449" : "#c0392b" }}>
+                ~{comb.km_autonomia_restante.toLocaleString("es-PY")} km
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#888" }}>Consumo configurado</div>
+              <div style={{ fontWeight: 700, fontSize: 18 }}>{comb.consumo_l_100km} L/100km</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── KPIs generales ───────────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 16 }}>
         <div className="card" style={{ padding: "14px 18px" }}>
           <div style={{ color: "#666", fontSize: 12, marginBottom: 4 }}>Total litros cargados</div>
@@ -87,62 +142,52 @@ export default function Combustible() {
           <div style={{ color: "#666", fontSize: 12, marginBottom: 4 }}>Precio promedio / litro</div>
           <div style={{ fontWeight: 700, fontSize: 22, color: "#7d6608" }}>{fmt(precioProm)}</div>
         </div>
-        <div className="card" style={{ padding: "14px 18px", background: "#eaf4fb" }}>
-          <div style={{ color: "#666", fontSize: 12, marginBottom: 6 }}>Autonomía total (sin carga)</div>
-          <div style={{ fontWeight: 700, fontSize: 20, color: "#1a5276" }}>{fmtKm(autonomiaSinCarga)}</div>
-          <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>10 L / 40 km</div>
-        </div>
-        <div className="card" style={{ padding: "14px 18px", background: "#eafaf1" }}>
-          <div style={{ color: "#666", fontSize: 12, marginBottom: 6 }}>Autonomía total (con carga)</div>
-          <div style={{ fontWeight: 700, fontSize: 20, color: "#1e8449" }}>{fmtKm(autonomiaConCarga)}</div>
-          <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>15 L / 40 km</div>
-        </div>
       </div>
 
-      {/* Gráficos */}
+      {/* ── Gráficos ─────────────────────────────────────────────── */}
       {items.length > 1 && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
           <div className="card" style={{ padding: 20 }}>
             <div style={{ fontWeight: 600, marginBottom: 12, color: "#333" }}>Evolución precio por litro (₲)</div>
-            <div style={{ position: "relative", height: 250 }}>
-            <Line data={{
-              labels: [...items].reverse().map(i => i.fecha),
-              datasets: [{
-                label: "₲ / litro",
-                data: [...items].reverse().map(i => i.precio_por_litro || 0),
-                borderColor: "#e67e22",
-                backgroundColor: "rgba(230,126,34,0.12)",
-                fill: true, tension: 0.4, pointRadius: 4,
-              }]
-            }} options={{
-              responsive: true, maintainAspectRatio: false,
-              plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => "₲ " + Number(c.raw).toLocaleString("es-PY") } } },
-              scales: { y: { ticks: { callback: v => "₲ " + Number(v).toLocaleString("es-PY") } } }
-            }} />
+            <div style={{ position: "relative", height: 220 }}>
+              <Line data={{
+                labels: [...items].reverse().map(i => i.fecha),
+                datasets: [{
+                  label: "₲ / litro",
+                  data: [...items].reverse().map(i => i.precio_por_litro || 0),
+                  borderColor: "#e67e22",
+                  backgroundColor: "rgba(230,126,34,0.12)",
+                  fill: true, tension: 0.4, pointRadius: 4,
+                }]
+              }} options={{
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => "₲ " + Number(c.raw).toLocaleString("es-PY") } } },
+                scales: { y: { ticks: { callback: v => "₲ " + Number(v).toLocaleString("es-PY") } } }
+              }} />
             </div>
           </div>
           <div className="card" style={{ padding: 20 }}>
             <div style={{ fontWeight: 600, marginBottom: 12, color: "#333" }}>Litros cargados por fecha</div>
-            <div style={{ position: "relative", height: 250 }}>
-            <Bar data={{
-              labels: [...items].reverse().map(i => i.fecha),
-              datasets: [{
-                label: "Litros",
-                data: [...items].reverse().map(i => Number(i.litros)),
-                backgroundColor: "rgba(41,128,185,0.7)",
-                borderRadius: 4,
-              }]
-            }} options={{
-              responsive: true, maintainAspectRatio: false,
-              plugins: { legend: { display: false } },
-              scales: { y: { ticks: { callback: v => v + " L" } } }
-            }} />
+            <div style={{ position: "relative", height: 220 }}>
+              <Bar data={{
+                labels: [...items].reverse().map(i => i.fecha),
+                datasets: [{
+                  label: "Litros",
+                  data: [...items].reverse().map(i => Number(i.litros)),
+                  backgroundColor: "rgba(41,128,185,0.7)",
+                  borderRadius: 4,
+                }]
+              }} options={{
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { ticks: { callback: v => v + " L" } } }
+              }} />
             </div>
           </div>
         </div>
       )}
 
-      {/* Filtros */}
+      {/* ── Filtros ───────────────────────────────────────────────── */}
       <div className="card" style={{ marginBottom: 12, padding: "12px 20px" }}>
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <span style={{ color: "#666", fontSize: 13 }}>Desde:</span>
@@ -161,7 +206,7 @@ export default function Combustible() {
         </div>
       </div>
 
-      {/* Tabla */}
+      {/* ── Tabla de cargas ───────────────────────────────────────── */}
       <div className="card">
         <div className="table-wrap">
           {loading ? <div className="loading">Cargando...</div> : (
@@ -172,44 +217,35 @@ export default function Combustible() {
                   <th>Litros</th>
                   <th>Monto</th>
                   <th>Precio / L</th>
-                  <th>Autonomía sin carga</th>
-                  <th>Autonomía con carga</th>
                   <th>Observaciones</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {items.length === 0 ? (
-                  <tr><td colSpan={8}><div className="empty-state">No hay cargas registradas</div></td></tr>
-                ) : items.map(item => {
-                  const litros = Number(item.litros);
-                  const sinCarga = litros * KM_POR_LITRO_SIN_CARGA;
-                  const conCarga = litros * KM_POR_LITRO_CON_CARGA;
-                  return (
-                    <tr key={item.id}>
-                      <td>{item.fecha}</td>
-                      <td style={{ fontWeight: 600 }}>{litros.toLocaleString("es-PY")} L</td>
-                      <td style={{ color: "#922b21", fontWeight: 600 }}>{fmt(item.monto)}</td>
-                      <td>{item.precio_por_litro ? fmt(item.precio_por_litro) : "—"}</td>
-                      <td style={{ color: "#1a5276", fontWeight: 600 }}>{fmtKm(sinCarga)}</td>
-                      <td style={{ color: "#1e8449", fontWeight: 600 }}>{fmtKm(conCarga)}</td>
-                      <td style={{ color: "#666", fontSize: 13 }}>{item.observaciones || "—"}</td>
-                      <td>
-                        <button onClick={() => eliminar(item.id)}
-                          style={{ background: "none", border: "none", color: "#e74c3c", cursor: "pointer", fontSize: 16 }}>
-                          ✕
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                  <tr><td colSpan={6}><div className="empty-state">No hay cargas registradas</div></td></tr>
+                ) : items.map(item => (
+                  <tr key={item.id}>
+                    <td>{fmtFecha(item.fecha)}</td>
+                    <td style={{ fontWeight: 600 }}>{Number(item.litros).toLocaleString("es-PY")} L</td>
+                    <td style={{ color: "#922b21", fontWeight: 600 }}>{fmt(item.monto)}</td>
+                    <td>{item.precio_por_litro ? fmt(item.precio_por_litro) : "—"}</td>
+                    <td style={{ color: "#666", fontSize: 13 }}>{item.observaciones || "—"}</td>
+                    <td>
+                      <button onClick={() => eliminar(item.id)}
+                        style={{ background: "none", border: "none", color: "#e74c3c", cursor: "pointer", fontSize: 16 }}>
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           )}
         </div>
       </div>
 
-      {/* Modal */}
+      {/* ── Modal nueva carga ─────────────────────────────────────── */}
       {modal && (
         <Modal title="Registrar Carga de Combustible" onClose={closeModal}
           footer={<>
@@ -234,19 +270,9 @@ export default function Combustible() {
             <input type="number" value={form.monto} placeholder="0"
               onChange={e => setForm(f => ({ ...f, monto: e.target.value }))} />
           </div>
-          {litrosForm > 0 && (
-            <div style={{ background: "#f0f4f8", borderRadius: 8, padding: "12px 16px", marginBottom: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 6, color: "#444" }}>Autonomía estimada:</div>
-              <div style={{ display: "flex", gap: 24 }}>
-                <div>
-                  <div style={{ fontSize: 11, color: "#888" }}>Sin carga (10L/40km)</div>
-                  <div style={{ fontWeight: 700, color: "#1a5276", fontSize: 16 }}>{fmtKm(previewSin)}</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, color: "#888" }}>Con carga (15L/40km)</div>
-                  <div style={{ fontWeight: 700, color: "#1e8449", fontSize: 16 }}>{fmtKm(previewCon)}</div>
-                </div>
-              </div>
+          {litrosForm > 0 && montoForm > 0 && (
+            <div style={{ background: "#f0f4f8", borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#555" }}>
+              Precio por litro: <strong>{fmt(precioPreview)}</strong>
             </div>
           )}
           <div className="form-group">

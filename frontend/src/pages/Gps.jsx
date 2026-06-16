@@ -159,19 +159,13 @@ export default function Gps() {
             icon="🔧"
           />
           {comb && (
-            <div className="card" style={{ padding: "16px 20px" }}>
-              <div style={{ color: "#888", fontSize: 12, marginBottom: 4 }}>⛽ Combustible estimado</div>
-              <div style={{ fontWeight: 800, fontSize: 22, color: comb.porcentaje_tanque > 25 ? "#1a5276" : "#c0392b" }}>
-                ~{comb.km_autonomia_restante.toLocaleString("es-PY")} km
-              </div>
-              <BarraCombustible pct={comb.porcentaje_tanque} />
-              <div style={{ fontSize: 11, color: "#999" }}>
-                {comb.litros_restantes}L restantes de {comb.litros_cargados}L · {comb.consumo_l_100km}L/100km
-              </div>
-              <div style={{ fontSize: 11, color: "#bbb", marginTop: 2 }}>
-                Recorridos {comb.km_desde_carga} km desde la última carga ({fmtFecha(comb.ultima_carga_fecha)})
-              </div>
-            </div>
+            <KpiCard
+              label="Autonomía combustible"
+              value={`~${comb.km_autonomia_restante.toLocaleString("es-PY")} km`}
+              sub={`${comb.litros_restantes}L restantes · ${comb.porcentaje_tanque}% del tanque`}
+              color={comb.porcentaje_tanque > 25 ? "#1a5276" : "#c0392b"}
+              icon="⛽"
+            />
           )}
         </div>
       )}
