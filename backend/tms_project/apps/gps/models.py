@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 
 class ConfiguracionVehiculo(models.Model):
@@ -24,7 +25,7 @@ class GpsPosicion(models.Model):
     lat = models.FloatField()
     lng = models.FloatField()
     estado = models.CharField(max_length=50, blank=True)
-    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    timestamp = models.DateTimeField(default=timezone.now, db_index=True)
 
     class Meta:
         app_label = "gps"
