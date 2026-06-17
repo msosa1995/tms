@@ -14,7 +14,7 @@ const PERIODOS = [
   { key: "3m",   label: "3 meses" },
 ];
 
-const COLORES_DONUT = ["#1D9E75","#378ADD","#EF9F27","#E24B4A","#8B5CF6","#B4B2A9"];
+const COLORES_DONUT = ["#00D4AA","#4DA6FF","#FFB800","#FF5B5B","#A78BFA","#64748B"];
 
 function fmt(n) {
   return "₲ " + Number(n || 0).toLocaleString("es-PY");
@@ -130,13 +130,13 @@ export default function Dashboard() {
       {
         label: "Ingresos",
         data: ultimos8.map(k => mapaI[k] || 0),
-        backgroundColor: "rgba(29,158,117,0.75)",
+        backgroundColor: "rgba(0,212,170,0.75)",
         borderRadius: 6,
       },
       {
         label: "Gastos",
         data: ultimos8.map(k => mapaG[k] || 0),
-        backgroundColor: "rgba(226,75,74,0.75)",
+        backgroundColor: "rgba(255,91,91,0.75)",
         borderRadius: 6,
       },
     ],
@@ -148,8 +148,8 @@ export default function Dashboard() {
     datasets: [{
       label: "Ganancia neta",
       data: gananciaData,
-      borderColor: "#378ADD",
-      backgroundColor: "rgba(55,138,221,0.08)",
+      borderColor: "#4DA6FF",
+      backgroundColor: "rgba(77,166,255,0.08)",
       fill: true,
       tension: 0.4,
       pointRadius: 5,
@@ -176,22 +176,33 @@ export default function Dashboard() {
     }],
   };
 
+  const darkTooltip = {
+    backgroundColor: "#1A2234",
+    borderColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    titleColor: "#E2E8F0",
+    bodyColor: "#94A3B8",
+  };
+
   const chartOpts = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: "bottom", labels: { font: { size: 12 }, boxWidth: 12, padding: 12 } },
-      tooltip: { callbacks: { label: ctx => " ₲ " + Number(ctx.raw).toLocaleString("es-PY") } },
+      legend: { position: "bottom", labels: { font: { size: 12 }, boxWidth: 12, padding: 12, color: "#64748B" } },
+      tooltip: { ...darkTooltip, callbacks: { label: ctx => " ₲ " + Number(ctx.raw).toLocaleString("es-PY") } },
     },
-    scales: { y: { ticks: { callback: v => "₲ " + Number(v).toLocaleString("es-PY"), font: { size: 11 } } } },
+    scales: {
+      x: { grid: { color: "rgba(255,255,255,0.04)" }, ticks: { color: "#64748B", font: { size: 11 } } },
+      y: { grid: { color: "rgba(255,255,255,0.04)" }, ticks: { color: "#64748B", callback: v => "₲ " + Number(v).toLocaleString("es-PY"), font: { size: 11 } } },
+    },
   };
 
   const donutOpts = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: "bottom", labels: { font: { size: 12 }, boxWidth: 12, padding: 10 } },
-      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ₲ ${Number(ctx.raw).toLocaleString("es-PY")}` } },
+      legend: { position: "bottom", labels: { font: { size: 12 }, boxWidth: 12, padding: 10, color: "#64748B" } },
+      tooltip: { ...darkTooltip, callbacks: { label: ctx => ` ${ctx.label}: ₲ ${Number(ctx.raw).toLocaleString("es-PY")}` } },
     },
   };
 
@@ -203,7 +214,7 @@ export default function Dashboard() {
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 500, color: "#1E293B" }}>Dashboard</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 500, color: "#E2E8F0" }}>Dashboard</h2>
           <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>
             {MESES_CORTOS[hoy.getMonth()+1]} {hoy.getFullYear()} · HBK137 Scania R450
           </div>
@@ -279,7 +290,7 @@ export default function Dashboard() {
       {/* Gráficos fila 1: Bar + Donut */}
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 16 }}>
         <div className="card" style={{ padding: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: "#1E293B", marginBottom: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: "#E2E8F0", marginBottom: 16 }}>
             Ingresos vs Gastos — últimos 8 meses
           </div>
           <div style={{ height: 260 }}>
@@ -288,7 +299,7 @@ export default function Dashboard() {
         </div>
 
         <div className="card" style={{ padding: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: "#1E293B", marginBottom: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: "#E2E8F0", marginBottom: 16 }}>
             Distribución de gastos
           </div>
           <div style={{ height: 260 }}>
@@ -300,7 +311,7 @@ export default function Dashboard() {
       {/* Gráficos fila 2: Line + Viajes recientes */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         <div className="card" style={{ padding: 20 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: "#1E293B", marginBottom: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: "#E2E8F0", marginBottom: 16 }}>
             Evolución de ganancia neta
           </div>
           <div style={{ height: 240 }}>
@@ -310,7 +321,7 @@ export default function Dashboard() {
 
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 500, color: "#1E293B" }}>Viajes recientes</div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: "#E2E8F0" }}>Viajes recientes</div>
             <a href="/viajes" style={{ fontSize: 12, color: "#1D9E75", textDecoration: "none", fontWeight: 500 }}>
               Ver todos →
             </a>

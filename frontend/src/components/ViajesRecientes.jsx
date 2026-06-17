@@ -2,10 +2,10 @@ import React, { useEffect, useState } from "react";
 import api from "../api/client";
 
 const ESTADO_STYLE = {
-  finalizado: { bg: "rgba(29,158,117,0.10)",  text: "#1D9E75" },
-  en_curso:   { bg: "rgba(55,138,221,0.10)",  text: "#378ADD" },
-  programado: { bg: "rgba(239,159,39,0.10)",  text: "#EF9F27" },
-  cancelado:  { bg: "rgba(226,75,74,0.10)",   text: "#E24B4A" },
+  finalizado: { bg: "rgba(0,212,170,0.10)",   text: "#00D4AA" },
+  en_curso:   { bg: "rgba(77,166,255,0.10)",  text: "#4DA6FF" },
+  programado: { bg: "rgba(255,184,0,0.10)",   text: "#FFB800" },
+  cancelado:  { bg: "rgba(255,91,91,0.10)",   text: "#FF5B5B" },
 };
 const ESTADO_LABEL = {
   finalizado: "Finalizado",
@@ -25,11 +25,11 @@ export default function ViajesRecientes() {
   }, []);
 
   if (loading) return (
-    <div style={{ color: "#94A3B8", fontSize: 13, padding: "20px 0" }}>Cargando...</div>
+    <div style={{ color: "#64748B", fontSize: 13, padding: "20px 0" }}>Cargando...</div>
   );
 
   if (!viajes.length) return (
-    <div style={{ color: "#94A3B8", fontSize: 13, padding: "20px 0", textAlign: "center" }}>
+    <div style={{ color: "#64748B", fontSize: 13, padding: "20px 0", textAlign: "center" }}>
       No hay viajes registrados.
     </div>
   );
@@ -44,11 +44,11 @@ export default function ViajesRecientes() {
           <div key={v.id} style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
             padding: "12px 0",
-            borderBottom: i < viajes.length - 1 ? "0.5px solid #E2E8F0" : "none",
+            borderBottom: i < viajes.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none",
           }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
-                fontSize: 14, fontWeight: 500, color: "#1E293B",
+                fontSize: 14, fontWeight: 500, color: "#E2E8F0",
                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
               }}>
                 {v.origen} → {v.destino}

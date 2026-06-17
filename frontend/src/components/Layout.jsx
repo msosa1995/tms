@@ -178,8 +178,8 @@ export default function Layout() {
 
         {/* Topbar */}
         <div style={{
-          background: "#fff",
-          borderBottom: "0.5px solid #E2E8F0",
+          background: "#080C14",
+          borderBottom: "1px solid rgba(255,255,255,0.07)",
           padding: "0 20px",
           height: 52,
           display: "flex",
@@ -193,12 +193,12 @@ export default function Layout() {
               onClick={() => setSidebarOpen(true)}
               style={{
                 display: "none", background: "transparent", border: "none",
-                fontSize: 22, cursor: "pointer", color: "#1E293B", padding: 4,
+                fontSize: 22, cursor: "pointer", color: "#E2E8F0", padding: 4,
               }}
             >☰</button>
             <img src={logoImg} alt="ALAS" style={{ height: 28, objectFit: "contain", borderRadius: 4 }} />
           </div>
-          <span style={{ color: "#94A3B8", fontSize: 12 }}>
+          <span style={{ color: "#374151", fontSize: 12, fontFamily: "'Courier New', monospace" }}>
             {new Date().toLocaleDateString("es-PY", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
           </span>
         </div>
