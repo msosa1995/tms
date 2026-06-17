@@ -91,8 +91,14 @@ export default function Layout() {
         >✕</button>
 
         {/* Logo */}
-        <div style={{ padding: "16px 16px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <img src={logoImg} alt="Logo" style={{ height: 42, objectFit: "contain" }} />
+        <div style={{ padding: "16px 16px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 10 }}>
+          <img src={logoImg} alt="R-SOSA" style={{ height: 38, objectFit: "contain", borderRadius: 6 }} />
+          <div>
+            <div style={{ color: "#fff", fontWeight: 500, fontSize: 16, letterSpacing: 0.5 }}>R-SOSA</div>
+            <div style={{ color: "#4B5563", fontSize: 10, fontWeight: 400, letterSpacing: 1.5, textTransform: "uppercase" }}>
+              Soluciones Logísticas
+            </div>
+          </div>
         </div>
 
         {/* Nav */}
