@@ -1,19 +1,33 @@
 :root {
-  --primary: #c0392b;
-  --primary-dark: #922b21;
-  --primary-light: #e74c3c;
-  --accent: #2ecc71;
-  --danger: #e74c3c;
-  --warning: #f39c12;
-  --bg: #f0f3f7;
-  --sidebar-bg: #111820;
-  --sidebar-text: #b0bec5;
-  --white: #ffffff;
-  --border: #dce3ec;
-  --text: #2c3e50;
-  --text-muted: #7f8c9a;
-  --shadow: 0 2px 8px rgba(0,0,0,0.08);
-  --radius: 8px;
+  --primary:        #1D9E75;
+  --primary-dark:   #178a63;
+  --primary-light:  #22b584;
+  --primary-alpha:  rgba(29,158,117,0.10);
+
+  --danger:         #E24B4A;
+  --danger-alpha:   rgba(226,75,74,0.10);
+  --info:           #378ADD;
+  --info-alpha:     rgba(55,138,221,0.10);
+  --warning:        #EF9F27;
+  --warning-alpha:  rgba(239,159,39,0.10);
+  --violet:         #8B5CF6;
+  --violet-alpha:   rgba(139,92,246,0.10);
+  --neutral:        #B4B2A9;
+
+  --bg:             #F2F5F9;
+  --bg-secondary:   #F8FAFC;
+  --sidebar-bg:     #111820;
+  --sidebar-text:   #94A3B8;
+
+  --white:          #ffffff;
+  --border:         #E2E8F0;
+  --text:           #1E293B;
+  --text-muted:     #64748B;
+  --text-light:     #94A3B8;
+
+  --shadow:         none;
+  --radius:         12px;
+  --radius-sm:      8px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,6 +38,7 @@ body {
   color: var(--text);
   font-size: 14px;
   line-height: 1.5;
+  font-weight: 400;
 }
 
 button { cursor: pointer; font-family: inherit; font-size: 14px; border: none; }
@@ -32,8 +47,8 @@ input, select, textarea {
   font-family: inherit;
   font-size: 14px;
   outline: none;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
   padding: 8px 12px;
   width: 100%;
   transition: border-color 0.2s;
@@ -42,7 +57,7 @@ input, select, textarea {
 }
 
 input:focus, select:focus, textarea:focus {
-  border-color: var(--primary-light);
+  border-color: var(--primary);
 }
 
 label {
@@ -54,12 +69,13 @@ label {
 
 .form-group { margin-bottom: 16px; }
 
+/* ── Botones ─────────────────────────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   font-weight: 500;
   transition: all 0.15s;
 }
@@ -71,10 +87,10 @@ label {
 .btn-primary:hover { background: var(--primary-dark); }
 
 .btn-success {
-  background: var(--accent);
+  background: var(--primary);
   color: var(--white);
 }
-.btn-success:hover { opacity: 0.9; }
+.btn-success:hover { background: var(--primary-dark); }
 
 .btn-danger {
   background: var(--danger);
@@ -84,20 +100,22 @@ label {
 
 .btn-outline {
   background: transparent;
-  border: 1.5px solid var(--border);
-  color: var(--text);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
 }
-.btn-outline:hover { border-color: var(--primary-light); color: var(--primary); }
+.btn-outline:hover { border-color: var(--primary); color: var(--primary); }
 
 .btn-sm { padding: 5px 10px; font-size: 13px; }
 
+/* ── Cards ────────────────────────────────────────────────────────── */
 .card {
   background: var(--white);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border: 0.5px solid var(--border);
   padding: 20px;
 }
 
+/* ── Page header ──────────────────────────────────────────────────── */
 .page-header {
   display: flex;
   align-items: center;
@@ -106,11 +124,12 @@ label {
 }
 
 .page-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--primary);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text);
 }
 
+/* ── Tablas ───────────────────────────────────────────────────────── */
 .table-wrap { overflow-x: auto; }
 
 table {
@@ -126,36 +145,38 @@ thead tr {
 th {
   padding: 10px 14px;
   text-align: left;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 13px;
   white-space: nowrap;
 }
 
 td {
   padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 0.5px solid var(--border);
   vertical-align: middle;
 }
 
-tbody tr:hover { background: #f5f8fc; }
+tbody tr:hover { background: var(--bg); }
 tbody tr:last-child td { border-bottom: none; }
 
+/* ── Badges ───────────────────────────────────────────────────────── */
 .badge {
   display: inline-block;
   padding: 3px 9px;
   border-radius: 20px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
-.badge-green { background: #d5f5e3; color: #1e8449; }
-.badge-blue  { background: #d6eaf8; color: #1a5276; }
-.badge-yellow{ background: #fef9e7; color: #9a7d0a; }
-.badge-red   { background: #fadbd8; color: #922b21; }
-.badge-gray  { background: #eaecee; color: #555; }
+.badge-green  { background: var(--primary-alpha);  color: var(--primary); }
+.badge-blue   { background: var(--info-alpha);     color: var(--info); }
+.badge-yellow { background: var(--warning-alpha);  color: var(--warning); }
+.badge-red    { background: var(--danger-alpha);   color: var(--danger); }
+.badge-gray   { background: rgba(180,178,169,0.15); color: #64748B; }
 
+/* ── Stat grid (usado en varias páginas) ──────────────────────────── */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -166,14 +187,14 @@ tbody tr:last-child td { border-bottom: none; }
 .stat-card {
   background: var(--white);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border: 0.5px solid var(--border);
   padding: 20px;
-  border-left: 4px solid var(--primary);
+  border-left: 3px solid var(--primary);
 }
 
 .stat-card .label {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-muted);
@@ -181,8 +202,8 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 .stat-card .value {
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 500;
   color: var(--primary);
   line-height: 1;
 }
@@ -193,6 +214,7 @@ tbody tr:last-child td { border-bottom: none; }
   margin-top: 4px;
 }
 
+/* ── Estados ─────────────────────────────────────────────────────── */
 .loading {
   display: flex;
   align-items: center;
@@ -202,27 +224,28 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 .error-msg {
-  background: #fadbd8;
-  color: #922b21;
+  background: var(--danger-alpha);
+  color: var(--danger);
   padding: 12px 16px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
+  border: 0.5px solid rgba(226,75,74,0.2);
   margin-bottom: 16px;
 }
-
-.search-bar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-}
-
-.search-bar input { max-width: 320px; }
 
 .empty-state {
   text-align: center;
   padding: 60px;
   color: var(--text-muted);
 }
+
+/* ── Búsqueda y paginación ────────────────────────────────────────── */
+.search-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.search-bar input { max-width: 320px; }
 
 .actions-col { display: flex; gap: 6px; }
 
@@ -232,16 +255,14 @@ tbody tr:last-child td { border-bottom: none; }
   justify-content: space-between;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid var(--border);
+  border-top: 0.5px solid var(--border);
   color: var(--text-muted);
   font-size: 13px;
 }
-
 .pagination-btns { display: flex; gap: 6px; }
 
-/* ── Responsive móvil ─────────────────────────────────────────── */
+/* ── Responsive móvil ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  /* Sidebar oculto por defecto en móvil */
   .sidebar {
     position: fixed !important;
     top: 0; left: 0; bottom: 0;
@@ -257,23 +278,13 @@ tbody tr:last-child td { border-bottom: none; }
   .hamburger-btn     { display: block !important; }
   .mobile-backdrop   { display: block !important; }
 
-  /* Tablas con scroll horizontal */
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   td, th { white-space: nowrap; padding: 8px 10px; font-size: 13px; }
 
-  /* Grillas de 2 columnas → 1 columna */
   .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-
-  /* Cards con menos padding */
   .card { padding: 14px; }
-
-  /* Page header apilado en móvil */
   .page-header { flex-direction: column; align-items: flex-start; gap: 10px; }
   .page-title  { font-size: 18px; }
-
-  /* Barra de búsqueda full width */
   .search-bar input { max-width: 100%; }
-
-  /* Texto más compacto */
   body { font-size: 13px; }
 }

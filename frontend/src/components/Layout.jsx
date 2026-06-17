@@ -2,36 +2,56 @@ import React, { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
-const NAV = [
-  { to: "/",              icon: "📊", label: "Dashboard"      },
-  { to: "/resumen",       icon: "📈", label: "Resumen"        },
-  { to: "/ingresos",      icon: "💰", label: "Ingresos"       },
-  { to: "/gastos",        icon: "💸", label: "Gastos"         },
-  { to: "/combustible",   icon: "⛽", label: "Combustible"    },
-  { to: "/mantenimiento", icon: "🔧", label: "Mantenimiento"  },
-  { to: "/vehiculos",     icon: "🚚", label: "Vehículos"      },
-  { to: "/choferes",      icon: "👤", label: "Choferes"       },
-  { to: "/clientes",      icon: "🏢", label: "Clientes"       },
-  { to: "/viajes",        icon: "🚛", label: "Viajes"         },
-  { to: "/gps",           icon: "📍", label: "GPS"            },
+const PRIMARY = "#1D9E75";
+
+const NAV_GROUPS = [
+  {
+    label: "FINANZAS",
+    items: [
+      { to: "/",         icon: "📊", label: "Dashboard"    },
+      { to: "/resumen",  icon: "📈", label: "Resumen"      },
+      { to: "/ingresos", icon: "💰", label: "Ingresos"     },
+      { to: "/gastos",   icon: "💸", label: "Gastos"       },
+    ],
+  },
+  {
+    label: "VEHÍCULO",
+    items: [
+      { to: "/combustible",   icon: "⛽", label: "Combustible"   },
+      { to: "/mantenimiento", icon: "🔧", label: "Mantenimiento" },
+      { to: "/vehiculos",     icon: "🚚", label: "Vehículos"     },
+      { to: "/gps",           icon: "📍", label: "GPS"           },
+    ],
+  },
+  {
+    label: "OPERACIONES",
+    items: [
+      { to: "/viajes",   icon: "🚛", label: "Viajes"   },
+      { to: "/choferes", icon: "👤", label: "Choferes" },
+      { to: "/clientes", icon: "🏢", label: "Clientes" },
+    ],
+  },
 ];
 
-const RED = "#c0392b";
-const RED_GLOW = "rgba(192,57,43,0.22)";
+function getInitials(user) {
+  if (!user) return "U";
+  if (user.first_name && user.last_name)
+    return (user.first_name[0] + user.last_name[0]).toUpperCase();
+  if (user.first_name) return user.first_name[0].toUpperCase();
+  if (user.username) return user.username.slice(0, 2).toUpperCase();
+  return "U";
+}
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
 
-  function handleLogout() {
-    logout();
-    navigate("/login");
-  }
+  function handleLogout() { logout(); navigate("/login"); }
+  function closeSidebar() { setSidebarOpen(false); }
 
-  function closeSidebar() {
-    setSidebarOpen(false);
-  }
+  const initials = getInitials(user);
+  const displayName = user?.first_name || user?.username || "Usuario";
 
   return (
     <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
@@ -40,10 +60,7 @@ export default function Layout() {
       {sidebarOpen && (
         <div
           onClick={closeSidebar}
-          style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
-            zIndex: 40, display: "none",
-          }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 40, display: "none" }}
           className="mobile-backdrop"
         />
       )}
@@ -52,12 +69,16 @@ export default function Layout() {
       <aside
         className={`sidebar${sidebarOpen ? " sidebar-open" : ""}`}
         style={{
-          width: 220, background: "#111820",
-          display: "flex", flexDirection: "column", flexShrink: 0,
-          position: "relative", zIndex: 50,
+          width: 224,
+          background: "#111820",
+          display: "flex",
+          flexDirection: "column",
+          flexShrink: 0,
+          position: "relative",
+          zIndex: 50,
         }}
       >
-        {/* Botón cerrar en móvil */}
+        {/* Botón cerrar móvil */}
         <button
           onClick={closeSidebar}
           className="sidebar-close-btn"
@@ -66,100 +87,123 @@ export default function Layout() {
             background: "transparent", border: "none", color: "#fff",
             fontSize: 22, cursor: "pointer", zIndex: 51,
           }}
-        >
-          ✕
-        </button>
+        >✕</button>
 
-        <div style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-          <div style={{ background: RED, height: 4 }} />
-          <div style={{ padding: "16px 16px 14px" }}>
-            <div style={{ color: "#fff", fontWeight: 900, fontSize: 22, letterSpacing: 1.5, lineHeight: 1 }}>
-              R<span style={{ color: RED }}>-</span>SOSA
-            </div>
-            <div style={{ color: "#7a9ab8", fontSize: 9, fontWeight: 700, letterSpacing: 2, marginTop: 3, textTransform: "uppercase" }}>
-              Soluciones Logísticas
-            </div>
+        {/* Logo */}
+        <div style={{ padding: "20px 16px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ color: "#fff", fontWeight: 500, fontSize: 18, letterSpacing: 0.5 }}>
+            <span style={{ color: PRIMARY }}>▲</span> ALAS
+          </div>
+          <div style={{ color: "#4B5563", fontSize: 10, fontWeight: 400, letterSpacing: 1.5, marginTop: 3, textTransform: "uppercase" }}>
+            Soluciones Logísticas
           </div>
         </div>
 
-        <nav style={{ flex: 1, padding: "10px 0", overflowY: "auto" }}>
-          {NAV.map(({ to, icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === "/"}
-              onClick={closeSidebar}
-              style={({ isActive }) => ({
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "10px 16px", color: "#b0bec5",
-                textDecoration: "none", fontSize: 14,
-                transition: "all 0.15s",
-                ...(isActive ? {
-                  background: RED_GLOW, color: "#fff",
-                  borderLeft: `3px solid ${RED}`, paddingLeft: 13,
-                } : {}),
-              })}
-            >
-              <span>{icon}</span>
-              <span>{label}</span>
-            </NavLink>
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: "8px 0", overflowY: "auto" }}>
+          {NAV_GROUPS.map(group => (
+            <div key={group.label} style={{ marginBottom: 4 }}>
+              <div style={{
+                padding: "10px 16px 4px",
+                fontSize: 10, fontWeight: 500, letterSpacing: 1.2,
+                color: "#374151", textTransform: "uppercase",
+              }}>
+                {group.label}
+              </div>
+              {group.items.map(({ to, icon, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === "/"}
+                  onClick={closeSidebar}
+                  style={({ isActive }) => ({
+                    display: "flex", alignItems: "center", gap: 10,
+                    padding: "9px 16px",
+                    margin: "1px 8px",
+                    borderRadius: 8,
+                    color: isActive ? "#fff" : "#94A3B8",
+                    background: isActive ? PRIMARY : "transparent",
+                    textDecoration: "none",
+                    fontSize: 14, fontWeight: isActive ? 500 : 400,
+                    transition: "all 0.12s",
+                  })}
+                >
+                  <span style={{ fontSize: 15 }}>{icon}</span>
+                  <span>{label}</span>
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
 
-        <div style={{ padding: "12px 16px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+        {/* Avatar + logout */}
+        <div style={{ padding: "12px 16px 16px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: "50%",
+              background: PRIMARY, color: "#fff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 13, fontWeight: 500, flexShrink: 0,
+            }}>
+              {initials}
+            </div>
+            <div>
+              <div style={{ color: "#E2E8F0", fontSize: 13, fontWeight: 500 }}>{displayName}</div>
+              <div style={{ color: "#4B5563", fontSize: 11 }}>{user?.email || "Administrador"}</div>
+            </div>
+          </div>
           <button
             onClick={handleLogout}
             style={{
-              width: "100%", background: "transparent", border: "1px solid rgba(255,255,255,0.15)",
-              color: "#7a9ab8", borderRadius: 6, padding: "7px 0", fontSize: 12,
-              cursor: "pointer", transition: "all 0.15s",
+              width: "100%",
+              background: "transparent",
+              border: "1px solid rgba(255,255,255,0.08)",
+              color: "#64748B",
+              borderRadius: 8,
+              padding: "7px 0",
+              fontSize: 12, fontWeight: 400,
+              cursor: "pointer",
+              transition: "all 0.12s",
             }}
           >
             Cerrar sesión
           </button>
-          <div style={{ color: "#546e7a", fontSize: 11, textAlign: "center", marginTop: 8 }}>
-            R-SOSA © {new Date().getFullYear()}
-          </div>
         </div>
       </aside>
 
-      {/* Contenido principal */}
+      {/* Main */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+
         {/* Topbar */}
         <div style={{
-          background: "#fff", borderBottom: "1px solid #dce3ec",
-          padding: "0 16px", height: 52,
-          display: "flex", alignItems: "center",
-          justifyContent: "space-between", flexShrink: 0,
-          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+          background: "#fff",
+          borderBottom: "0.5px solid #E2E8F0",
+          padding: "0 20px",
+          height: 52,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexShrink: 0,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Hamburger — solo en móvil */}
             <button
               className="hamburger-btn"
               onClick={() => setSidebarOpen(true)}
               style={{
                 display: "none", background: "transparent", border: "none",
-                fontSize: 22, cursor: "pointer", color: "#111820", padding: 4,
+                fontSize: 22, cursor: "pointer", color: "#1E293B", padding: 4,
               }}
-            >
-              ☰
-            </button>
-            <div>
-              <div style={{ fontWeight: 800, color: "#111820", fontSize: 16, letterSpacing: 0.5 }}>
-                R<span style={{ color: RED }}>-</span>SOSA
-              </div>
-              <div style={{ color: RED, fontSize: 11, fontWeight: 700, letterSpacing: 1 }}>
-                SOLUCIONES LOGÍSTICAS
-              </div>
-            </div>
+            >☰</button>
+            <span style={{ color: "#1E293B", fontSize: 15, fontWeight: 500 }}>
+              <span style={{ color: PRIMARY }}>▲</span> ALAS
+            </span>
           </div>
-          <span style={{ color: "#90a4ae", fontSize: 12 }}>
-            {new Date().toLocaleDateString("es-PY", { weekday: "short", day: "numeric", month: "short" })}
+          <span style={{ color: "#94A3B8", fontSize: 12 }}>
+            {new Date().toLocaleDateString("es-PY", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
           </span>
         </div>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+        <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
           <Outlet />
         </div>
       </main>
