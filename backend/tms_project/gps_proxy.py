@@ -74,31 +74,20 @@ def _check_fuel_alert():
     km_autonomia = restantes * (100 / config.consumo_l_100km)
     porcentaje   = round(restantes / 100 * 100)
 
-    if km_autonomia <= ALERTA_KM_CRITICA:
-        clave = "wa_alerta_critica"
-        ttl   = COOLDOWN_CRITICA
-        emoji = "🔴"
-        nivel = "CRÍTICA"
-    elif km_autonomia <= ALERTA_KM_BAJA:
-        clave = "wa_alerta_baja"
-        ttl   = COOLDOWN_BAJA
-        emoji = "🟡"
-        nivel = "BAJA"
-    else:
+    if km_autonomia > ALERTA_KM_CRITICA:
         return  # sin alerta
 
-    if cache.get(clave):
+    if cache.get("wa_alerta_critica"):
         return  # ya se envió recientemente
 
     mensaje = (
-        f"{emoji} ALERTA COMBUSTIBLE {nivel} — HBK137\n"
+        f"🔴 ALERTA COMBUSTIBLE — HBK137\n"
         f"Autonomía restante: ~{round(km_autonomia)} km\n"
         f"Combustible: {round(restantes, 1)}L ({porcentaje}% del tanque)\n"
-        f"Recorrido desde carga ({ultima_carga.fecha}): {round(km_desde_carga)} km\n"
         f"— R-SOSA Soluciones Logísticas"
     )
     _send_whatsapp(mensaje)
-    cache.set(clave, True, ttl)
+    cache.set("wa_alerta_critica", True, COOLDOWN_CRITICA)
 
 
 # ── Sesion Cusat ─────────────────────────────────────────────────────────────
