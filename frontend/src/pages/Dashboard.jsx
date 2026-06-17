@@ -216,7 +216,7 @@ export default function Dashboard() {
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 500, color: "#E2E8F0" }}>Dashboard</h2>
           <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>
-            {MESES_CORTOS[hoy.getMonth()+1]} {hoy.getFullYear()} · HBK137 Scania R450
+            {MESES_CORTOS[hoy.getMonth()+1]} {hoy.getFullYear()} · R-SOSA Soluciones Logísticas
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
