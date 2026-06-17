@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import logoImg from "../assets/logo.jpeg";
 
 const PRIMARY = "#1D9E75";
 
@@ -90,12 +91,13 @@ export default function Layout() {
         >✕</button>
 
         {/* Logo */}
-        <div style={{ padding: "20px 16px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <div style={{ color: "#fff", fontWeight: 500, fontSize: 18, letterSpacing: 0.5 }}>
-            <span style={{ color: PRIMARY }}>▲</span> ALAS
-          </div>
-          <div style={{ color: "#4B5563", fontSize: 10, fontWeight: 400, letterSpacing: 1.5, marginTop: 3, textTransform: "uppercase" }}>
-            Soluciones Logísticas
+        <div style={{ padding: "16px 16px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 10 }}>
+          <img src={logoImg} alt="ALAS" style={{ height: 38, width: 38, objectFit: "contain", borderRadius: 6 }} />
+          <div>
+            <div style={{ color: "#fff", fontWeight: 500, fontSize: 16, letterSpacing: 0.5 }}>ALAS</div>
+            <div style={{ color: "#4B5563", fontSize: 10, fontWeight: 400, letterSpacing: 1.5, textTransform: "uppercase" }}>
+              Soluciones Logísticas
+            </div>
           </div>
         </div>
 
@@ -194,9 +196,7 @@ export default function Layout() {
                 fontSize: 22, cursor: "pointer", color: "#1E293B", padding: 4,
               }}
             >☰</button>
-            <span style={{ color: "#1E293B", fontSize: 15, fontWeight: 500 }}>
-              <span style={{ color: PRIMARY }}>▲</span> ALAS
-            </span>
+            <img src={logoImg} alt="ALAS" style={{ height: 28, objectFit: "contain", borderRadius: 4 }} />
           </div>
           <span style={{ color: "#94A3B8", fontSize: 12 }}>
             {new Date().toLocaleDateString("es-PY", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
