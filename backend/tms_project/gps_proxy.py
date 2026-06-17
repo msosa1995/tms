@@ -20,6 +20,86 @@ CACHE_TTL   = 60 * 50  # 50 minutos
 
 TZ_LOCAL = pytz.timezone("America/Asuncion")
 
+# ── WhatsApp UltraMsg ─────────────────────────────────────────────────────────
+ULTRAMSG_INSTANCE = getattr(settings, "ULTRAMSG_INSTANCE", "instance181259")
+ULTRAMSG_TOKEN    = getattr(settings, "ULTRAMSG_TOKEN",    "73vmo1a3e5d0i6b8")
+WHATSAPP_NUMEROS  = getattr(settings, "WHATSAPP_NUMEROS",  "+595971966099,+595972449291")
+
+ALERTA_KM_CRITICA = 60    # rojo
+ALERTA_KM_BAJA    = 100   # amarillo
+COOLDOWN_CRITICA  = 60 * 60 * 3   # 3 horas entre alertas críticas
+COOLDOWN_BAJA     = 60 * 60 * 6   # 6 horas entre alertas bajas
+
+
+def _send_whatsapp(mensaje):
+    url = f"https://api.ultramsg.com/{ULTRAMSG_INSTANCE}/messages/chat"
+    for numero in WHATSAPP_NUMEROS.split(","):
+        try:
+            req.post(url, data={
+                "token": ULTRAMSG_TOKEN,
+                "to":    numero.strip(),
+                "body":  mensaje,
+            }, timeout=10)
+        except Exception:
+            pass
+
+
+def _check_fuel_alert():
+    from datetime import datetime, time
+    from tms_project.apps.gps.models import GpsPosicion, ConfiguracionVehiculo
+    from tms_project.apps.ingresos.models import CargaCombustible
+
+    dispositivo = "HBK137"
+    config = ConfiguracionVehiculo.objects.filter(dispositivo=dispositivo).first()
+    if not config:
+        return
+
+    ultima_carga = CargaCombustible.objects.order_by("-fecha").first()
+    if not ultima_carga:
+        return
+
+    inicio = TZ_LOCAL.localize(datetime.combine(ultima_carga.fecha, time.min))
+    pos_carga = list(
+        GpsPosicion.objects.filter(dispositivo=dispositivo, timestamp__gte=inicio)
+        .order_by("timestamp").values("lat", "lng")
+    )
+    km_desde_carga = sum(
+        _haversine_km(pos_carga[i-1]["lat"], pos_carga[i-1]["lng"],
+                      pos_carga[i]["lat"],   pos_carga[i]["lng"])
+        for i in range(1, len(pos_carga))
+    )
+    litros      = float(ultima_carga.litros)
+    consumidos  = km_desde_carga * (config.consumo_l_100km / 100)
+    restantes   = max(0.0, litros - consumidos)
+    km_autonomia = restantes * (100 / config.consumo_l_100km)
+    porcentaje   = round(restantes / 100 * 100)
+
+    if km_autonomia <= ALERTA_KM_CRITICA:
+        clave = "wa_alerta_critica"
+        ttl   = COOLDOWN_CRITICA
+        emoji = "🔴"
+        nivel = "CRÍTICA"
+    elif km_autonomia <= ALERTA_KM_BAJA:
+        clave = "wa_alerta_baja"
+        ttl   = COOLDOWN_BAJA
+        emoji = "🟡"
+        nivel = "BAJA"
+    else:
+        return  # sin alerta
+
+    if cache.get(clave):
+        return  # ya se envió recientemente
+
+    mensaje = (
+        f"{emoji} ALERTA COMBUSTIBLE {nivel} — HBK137\n"
+        f"Autonomía restante: ~{round(km_autonomia)} km\n"
+        f"Combustible: {round(restantes, 1)}L ({porcentaje}% del tanque)\n"
+        f"Recorrido desde carga ({ultima_carga.fecha}): {round(km_desde_carga)} km\n"
+        f"— R-SOSA Soluciones Logísticas"
+    )
+    _send_whatsapp(mensaje)
+    cache.set(clave, True, ttl)
+
 
 # ── Sesion Cusat ─────────────────────────────────────────────────────────────
 
@@ -138,6 +218,12 @@ def gps_snapshot(request):
             lng=parsed["lng"],
             estado=parsed["estado"],
         )
+
+        try:
+            _check_fuel_alert()
+        except Exception:
+            pass
+
         return Response({"ok": True, "msg": "Posicion guardada", "guardado": True,
                          "lat": parsed["lat"], "lng": parsed["lng"]})
 
