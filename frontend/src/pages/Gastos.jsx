@@ -4,12 +4,12 @@ import Modal from "../components/Modal";
 
 function fmt(n) { return n ? "₲ " + Number(n).toLocaleString("es-PY") : "₲ 0"; }
 
-const CATEGORIAS = ["combustible","peajes","viaticos","reparaciones","neumaticos","mantenimiento","seguros","impuestos","otros"];
-const CAT_LABEL = { combustible:"Combustible", peajes:"Peajes", viaticos:"Viáticos", reparaciones:"Reparaciones", neumaticos:"Neumáticos", mantenimiento:"Mantenimiento", seguros:"Seguros", impuestos:"Impuestos", otros:"Otros" };
-const CAT_COLOR = { combustible:"#e67e22", peajes:"#8e44ad", viaticos:"#27ae60", reparaciones:"#c0392b", neumaticos:"#2980b9", mantenimiento:"#16a085", seguros:"#f39c12", impuestos:"#7f8c8d", otros:"#34495e" };
+const CATEGORIAS = ["combustible","peajes","viaticos","reparaciones","neumaticos","mantenimiento","seguros","impuestos","sueldo","otros"];
+const CAT_LABEL = { combustible:"Combustible", peajes:"Peajes", viaticos:"Viáticos", reparaciones:"Reparaciones", neumaticos:"Neumáticos", mantenimiento:"Mantenimiento", seguros:"Seguros", impuestos:"Impuestos", sueldo:"Sueldo", otros:"Otros" };
+const CAT_COLOR = { combustible:"#e67e22", peajes:"#8e44ad", viaticos:"#27ae60", reparaciones:"#c0392b", neumaticos:"#2980b9", mantenimiento:"#16a085", seguros:"#f39c12", impuestos:"#7f8c8d", sueldo:"#0984e3", otros:"#34495e" };
 
 const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-const EMPTY = { viaje: "", vehiculo: "", fecha: new Date().toISOString().slice(0,10), categoria: "combustible", monto: "", descripcion: "", proveedor: "", numero_comprobante: "" };
+const EMPTY = { vehiculo: "", fecha: new Date().toISOString().slice(0,10), categoria: "combustible", monto: "", descripcion: "" };
 
 function semanaDelMes(fecha) { return Math.ceil(new Date(fecha+"T00:00:00").getDate() / 7); }
 function rangoSemana(s, y, m) {
@@ -35,7 +35,6 @@ export default function Gastos() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [vehiculos, setVehiculos] = useState([]);
-  const [viajes, setViajes] = useState([]);
   const [catFilter, setCatFilter] = useState("");
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
@@ -61,7 +60,6 @@ export default function Gastos() {
 
   useEffect(() => {
     api.get("/vehiculos/", { params: { page_size: 200 } }).then(r => setVehiculos(r.data.results || r.data));
-    api.get("/viajes/", { params: { page_size: 200 } }).then(r => setViajes(r.data.results || r.data));
   }, []);
 
   function openNew() { setForm(EMPTY); setModal(true); setError(""); }
@@ -71,7 +69,6 @@ export default function Gastos() {
     setSaving(true); setError("");
     try {
       const payload = { ...form };
-      if (!payload.viaje) delete payload.viaje;
       if (!payload.vehiculo) delete payload.vehiculo;
       await api.post("/gastos/", payload);
       closeModal(); load();
@@ -221,7 +218,6 @@ export default function Gastos() {
                             <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500 }}>Fecha</th>
                             <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500 }}>Categoría</th>
                             <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500 }}>Descripción</th>
-                            <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500 }}>Proveedor</th>
                             <th style={{ textAlign:"right", padding:"4px 8px", fontWeight:500 }}>Monto</th>
                           </tr></thead>
                           <tbody>
@@ -234,7 +230,6 @@ export default function Gastos() {
                                   </span>
                                 </td>
                                 <td style={{ padding:"6px 8px", color:"#555" }}>{g.descripcion?.slice(0,50)}</td>
-                                <td style={{ padding:"6px 8px", color:"#888" }}>{g.proveedor||"—"}</td>
                                 <td style={{ padding:"6px 8px", textAlign:"right", fontWeight:600, color:"#922b21" }}>₲ {Number(g.monto).toLocaleString("es-PY")}</td>
                               </tr>
                             ))}
@@ -265,20 +260,13 @@ export default function Gastos() {
             </select>
           </div>
           <div className="form-group">
-            <label>Viaje (opcional)</label>
-            <select value={form.viaje} onChange={e => setForm(f => ({ ...f, viaje: e.target.value }))}>
-              <option value="">Sin viaje</option>
-              {viajes.map(v => <option key={v.id} value={v.id}>{v.numero_viaje} — {v.origen} → {v.destino}</option>)}
-            </select>
-          </div>
-          <div className="form-group">
             <label>Vehículo (opcional)</label>
             <select value={form.vehiculo} onChange={e => setForm(f => ({ ...f, vehiculo: e.target.value }))}>
               <option value="">Sin vehículo</option>
               {vehiculos.map(v => <option key={v.id} value={v.id}>{v.patente} — {v.marca} {v.modelo}</option>)}
             </select>
           </div>
-          {[["fecha","Fecha","date"],["monto","Monto (₲)","number"],["numero_comprobante","N° Comprobante","text"],["proveedor","Proveedor","text"]].map(([k,lbl,type]) => (
+          {[["fecha","Fecha","date"],["monto","Monto (₲)","number"]].map(([k,lbl,type]) => (
             <div className="form-group" key={k}>
               <label>{lbl}</label>
               <input type={type} value={form[k] || ""} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} />
