@@ -129,9 +129,9 @@ export default function Gastos() {
       {importResult && (
         <div style={{
           padding: "12px 16px", borderRadius: 8, marginBottom: 16,
-          background: importResult.ok ? "#eafaf1" : "#fdedec",
-          border: `1px solid ${importResult.ok ? "#27ae60" : "#e74c3c"}`,
-          color: importResult.ok ? "#1e8449" : "#c0392b",
+          background: importResult.ok ? "rgba(0,212,170,0.08)" : "rgba(255,91,91,0.08)",
+          border: `1px solid ${importResult.ok ? "rgba(0,212,170,0.25)" : "rgba(255,91,91,0.25)"}`,
+          color: importResult.ok ? "#00D4AA" : "#FF5B5B",
         }}>
           {importResult.mensaje}
           {importResult.errores?.length > 0 && (
@@ -161,7 +161,7 @@ export default function Gastos() {
             <button className="btn btn-outline" style={{ padding: "4px 10px", fontSize: 12 }}
               onClick={() => { setFechaDesde(""); setFechaHasta(""); setCatFilter(""); }}>Limpiar</button>
           )}
-          <span style={{ marginLeft: "auto", fontWeight: 700, color: "#922b21", fontSize: 15 }}>
+          <span style={{ marginLeft: "auto", fontWeight: 700, color: "#FF5B5B", fontSize: 15 }}>
             Total: ₲ {total.toLocaleString("es-PY")}
           </span>
         </div>
@@ -178,17 +178,17 @@ export default function Gastos() {
               <div onClick={() => toggleMes(k)} style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",
                 padding: "14px 20px", cursor: "pointer",
-                background: abierto ? "#fff5f5" : "#fff",
-                borderBottom: abierto ? "1px solid #e2e8f0" : "none", userSelect: "none"
+                background: abierto ? "rgba(255,91,91,0.06)" : "var(--surface-2)",
+                borderBottom: abierto ? "1px solid rgba(255,255,255,0.06)" : "none", userSelect: "none"
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 18, color: abierto ? "#c0392b" : "#444" }}>{abierto ? "▼" : "▶"}</span>
-                  <span style={{ fontWeight: 600, fontSize: 16 }}>{MESES[m-1]} {y}</span>
-                  <span style={{ background: "#e2e8f0", borderRadius: 12, padding: "2px 10px", fontSize: 12, color: "#555" }}>
+                  <span style={{ fontSize: 16, color: abierto ? "#FF5B5B" : "#475569" }}>{abierto ? "▼" : "▶"}</span>
+                  <span style={{ fontWeight: 600, fontSize: 15, color: "#E2E8F0" }}>{MESES[m-1]} {y}</span>
+                  <span style={{ background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "2px 10px", fontSize: 12, color: "#64748B" }}>
                     {Object.values(semanas).flat().length} gastos
                   </span>
                 </div>
-                <span style={{ fontWeight: 700, fontSize: 18, color: "#922b21" }}>₲ {totMes.toLocaleString("es-PY")}</span>
+                <span style={{ fontWeight: 700, fontSize: 16, color: "#FF5B5B" }}>₲ {totMes.toLocaleString("es-PY")}</span>
               </div>
               {abierto && (
                 <div style={{ padding: "12px 20px" }}>
@@ -199,10 +199,10 @@ export default function Gastos() {
                     entradas.forEach(e => { porCat[e.categoria] = (porCat[e.categoria]||0)+Number(e.monto); });
                     return (
                       <div key={sn} style={{ marginBottom: 16 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, paddingBottom: 4, borderBottom: "1px solid #f1f5f9" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, paddingBottom: 4, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                           <div>
-                            <span style={{ fontWeight: 600, color: "#374151", fontSize: 13 }}>Semana {sn}</span>
-                            <span style={{ color: "#888", fontWeight: 400, fontSize: 12, marginLeft: 6 }}>({rangoSemana(Number(sn),y,m)})</span>
+                            <span style={{ fontWeight: 600, color: "#94A3B8", fontSize: 13 }}>Semana {sn}</span>
+                            <span style={{ color: "#475569", fontWeight: 400, fontSize: 12, marginLeft: 6 }}>({rangoSemana(Number(sn),y,m)})</span>
                             <span style={{ marginLeft: 10 }}>
                               {Object.entries(porCat).map(([cat,val]) => (
                                 <span key={cat} style={{ display:"inline-block", background: CAT_COLOR[cat]||"#95a5a6", color:"#fff", borderRadius:10, padding:"1px 7px", fontSize:10, marginRight:4 }}>
@@ -211,26 +211,26 @@ export default function Gastos() {
                               ))}
                             </span>
                           </div>
-                          <span style={{ fontWeight: 600, color: "#922b21", fontSize: 13 }}>₲ {totSem.toLocaleString("es-PY")}</span>
+                          <span style={{ fontWeight: 600, color: "#FF5B5B", fontSize: 13 }}>₲ {totSem.toLocaleString("es-PY")}</span>
                         </div>
                         <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
-                          <thead><tr style={{ color:"#888" }}>
-                            <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500 }}>Fecha</th>
-                            <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500 }}>Categoría</th>
-                            <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500 }}>Descripción</th>
-                            <th style={{ textAlign:"right", padding:"4px 8px", fontWeight:500 }}>Monto</th>
+                          <thead><tr style={{ color:"#475569" }}>
+                            <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500, color:"#475569", background:"none", textTransform:"none", fontSize:12 }}>Fecha</th>
+                            <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500, color:"#475569", background:"none", textTransform:"none", fontSize:12 }}>Categoría</th>
+                            <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500, color:"#475569", background:"none", textTransform:"none", fontSize:12 }}>Descripción</th>
+                            <th style={{ textAlign:"right", padding:"4px 8px", fontWeight:500, color:"#475569", background:"none", textTransform:"none", fontSize:12 }}>Monto</th>
                           </tr></thead>
                           <tbody>
                             {entradas.sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(g => (
-                              <tr key={g.id} style={{ borderTop:"1px solid #f8fafc" }}>
-                                <td style={{ padding:"6px 8px" }}>{g.fecha}</td>
+                              <tr key={g.id} style={{ borderTop:"1px solid rgba(255,255,255,0.04)" }}>
+                                <td style={{ padding:"6px 8px", color:"#64748B" }}>{g.fecha}</td>
                                 <td style={{ padding:"6px 8px" }}>
                                   <span style={{ background:CAT_COLOR[g.categoria]||"#95a5a6", color:"#fff", borderRadius:10, padding:"2px 8px", fontSize:11 }}>
                                     {CAT_LABEL[g.categoria]||g.categoria}
                                   </span>
                                 </td>
-                                <td style={{ padding:"6px 8px", color:"#555" }}>{g.descripcion?.slice(0,50)}</td>
-                                <td style={{ padding:"6px 8px", textAlign:"right", fontWeight:600, color:"#922b21" }}>₲ {Number(g.monto).toLocaleString("es-PY")}</td>
+                                <td style={{ padding:"6px 8px", color:"#64748B" }}>{g.descripcion?.slice(0,50)}</td>
+                                <td style={{ padding:"6px 8px", textAlign:"right", fontWeight:600, color:"#FF5B5B" }}>₲ {Number(g.monto).toLocaleString("es-PY")}</td>
                               </tr>
                             ))}
                           </tbody>
