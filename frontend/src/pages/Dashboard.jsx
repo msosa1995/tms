@@ -87,7 +87,12 @@ function StatusCard({ Icon, label, estado, detail, delay = 0 }) {
 
 // ── GPS Panel ────────────────────────────────────────────────────────
 function GPSPanel({ posicion, gpsEstado, loadingGPS }) {
-  const isOnline = !!posicion?.lat;
+  // posicion = { ok, dispositivos: [{ lat, lng, estado, ultima_actualizacion, ... }] }
+  const device   = posicion?.dispositivos?.[0];
+  const isOnline = !loadingGPS && posicion?.ok && !!device?.lat;
+  const lat      = device?.lat;
+  const lng      = device?.lng;
+  const odometro = gpsEstado?.odometro?.actual_km;
 
   return (
     <div style={{ background:"linear-gradient(145deg,#0C1020,#101628)", border:"1px solid rgba(255,255,255,0.055)", borderRadius:14, padding:20, display:"flex", flexDirection:"column", gap:14 }}>
@@ -110,18 +115,18 @@ function GPSPanel({ posicion, gpsEstado, loadingGPS }) {
           <div style={{ borderRadius:9, overflow:"hidden", height:190, border:"1px solid rgba(255,255,255,0.07)" }}>
             <iframe
               title="GPS"
-              src={`https://www.openstreetmap.org/export/embed.html?bbox=${posicion.lon-0.02},${posicion.lat-0.02},${posicion.lon+0.02},${posicion.lat+0.02}&layer=mapnik&marker=${posicion.lat},${posicion.lon}`}
+              src={`https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.02},${lat-0.02},${lng+0.02},${lat+0.02}&layer=mapnik&marker=${lat},${lng}`}
               style={{ width:"100%", height:"100%", border:"none", filter:"invert(0.88) hue-rotate(180deg) saturate(0.6)" }}
             />
           </div>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
             {[
-              { label:"Latitud",   value: Number(posicion.lat).toFixed(5) },
-              { label:"Longitud",  value: Number(posicion.lon).toFixed(5) },
-              { label:"Señal",     value: posicion.timestamp ? timeSince(posicion.timestamp) : "–" },
-              { label:"Estado",    value: gpsEstado?.estado || "–" },
-              { label:"Velocidad", value: posicion.velocidad != null ? `${posicion.velocidad} km/h` : "–" },
-              { label:"Patente",   value: "HBK137" },
+              { label:"Latitud",        value: Number(lat).toFixed(5) },
+              { label:"Longitud",       value: Number(lng).toFixed(5) },
+              { label:"Última señal",   value: device?.ultima_actualizacion || "–" },
+              { label:"Estado",         value: device?.estado || "–" },
+              { label:"Odómetro",       value: odometro ? `${odometro.toLocaleString("es-PY")} km` : "–" },
+              { label:"Patente",        value: "HBK137" },
             ].map(({ label, value }) => (
               <div key={label} style={{ background:"rgba(255,255,255,0.02)", borderRadius:7, padding:"8px 10px", border:"1px solid rgba(255,255,255,0.04)" }}>
                 <div style={{ fontSize:9, color:"#2D3A52", textTransform:"uppercase", letterSpacing:0.6, marginBottom:3 }}>{label}</div>
@@ -133,8 +138,9 @@ function GPSPanel({ posicion, gpsEstado, loadingGPS }) {
       ) : (
         <div style={{ textAlign:"center", padding:"36px 20px", color:"#2D3A52" }}>
           <Satellite size={28} color="#2D3A52" strokeWidth={1.2} style={{ marginBottom:10 }} />
-          <div style={{ fontSize:13 }}>Sin datos de GPS</div>
-          <a href="/gps" style={{ fontSize:12, color:PRIMARY, marginTop:8, display:"inline-block" }}>Abrir GPS →</a>
+          <div style={{ fontSize:13 }}>GPS sin señal activa</div>
+          <div style={{ fontSize:11, color:"#1E2E44", marginTop:4 }}>Cusat puede estar sin conexión</div>
+          <a href="/gps" style={{ fontSize:12, color:PRIMARY, marginTop:8, display:"inline-block" }}>Ver historial GPS →</a>
         </div>
       )}
     </div>
@@ -255,15 +261,23 @@ export default function Dashboard() {
     const a = document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`rsosa_${periodo}.csv`; a.click();
   }
 
-  // Status computation
-  const latestComb = combustible[0];
-  const kmAut      = latestComb?.km_autonomia_restante ?? null;
-  const combEst    = kmAut===null ? "offline" : kmAut<=60 ? "error" : kmAut<=100 ? "warning" : "ok";
-  const combDetail = kmAut!==null ? `~${Math.round(kmAut)} km autonomía` : "Sin datos";
-  const gpsOnline  = !!posicion?.lat && !loadingGPS;
+  // Status computation — posicion.dispositivos[0] is the live device from Cusat
+  const gpsDevice  = posicion?.dispositivos?.[0];
+  const gpsOnline  = !!gpsDevice?.lat && !loadingGPS && posicion?.ok;
   const gpsEst     = loadingGPS ? "offline" : gpsOnline ? "ok" : "offline";
-  const gpsDetail  = gpsOnline ? (posicion?.timestamp ? timeSince(posicion.timestamp) : "Disponible") : "Sin señal";
-  const camionEst  = loadingGPS ? "offline" : (gpsEstado?.estado?.toLowerCase().includes("deten") ? "warning" : gpsEstado?.estado ? "ok" : "offline");
+  const gpsDetail  = gpsOnline ? (gpsDevice?.ultima_actualizacion || "Disponible") : "Sin señal";
+  const camionEst  = loadingGPS ? "offline" : (gpsDevice?.estado?.toLowerCase().includes("deten") ? "warning" : gpsDevice?.estado ? "ok" : "offline");
+  const camionLabel = gpsDevice?.estado || "HBK137";
+
+  // Combustible — km_autonomia_restante viene de gps_estado, no del modelo CargaCombustible
+  const kmAut      = gpsEstado?.combustible?.km_autonomia_restante ?? null;
+  const combEst    = loadingGPS ? "offline" : kmAut===null ? "offline" : kmAut<=60 ? "error" : kmAut<=100 ? "warning" : "ok";
+  const combDetail = kmAut!==null ? `~${Math.round(kmAut)} km autonomía` : "Sin datos";
+
+  // Mantenimiento — alerta viene de gps_estado
+  const mantAlerta = gpsEstado?.mantenimiento?.alerta;
+  const mantEst    = loadingGPS ? "offline" : !mantAlerta ? "offline" : mantAlerta==="ok" ? "ok" : mantAlerta==="proximo" ? "warning" : "error";
+  const mantDetail = gpsEstado?.mantenimiento?.km_hasta != null ? `${Math.round(gpsEstado.mantenimiento.km_hasta)} km para próx. mant.` : "Ver detalles";
 
   const labels    = ult8.map(k=>{ const [y,m]=k.split("-"); return `${MESES_CORTOS[+m]} ${y.slice(2)}`; });
   const ganData   = ult8.map(k=>(mapaI[k]||0)-(mapaG[k]||0));
@@ -386,11 +400,11 @@ export default function Dashboard() {
 
       {/* ── STATUS ROW ───────────────────────────────────────────── */}
       <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-        <StatusCard Icon={Satellite} label="GPS"          estado={gpsEst}    detail={gpsDetail}                    delay={0.04} />
-        <StatusCard Icon={Truck}     label="Camión"        estado={camionEst} detail={gpsEstado?.estado||"HBK137"}  delay={0.08} />
-        <StatusCard Icon={Fuel}      label="Combustible"   estado={combEst}   detail={combDetail}                   delay={0.12} />
-        <StatusCard Icon={Wrench}    label="Mantenimiento" estado="ok"        detail="Ver detalles"                 delay={0.16} />
-        <StatusCard Icon={Activity}  label="Sistema"       estado="ok"        detail="Railway · Vercel"             delay={0.20} />
+        <StatusCard Icon={Satellite} label="GPS"          estado={gpsEst}    detail={gpsDetail}   delay={0.04} />
+        <StatusCard Icon={Truck}     label="Camión"        estado={camionEst} detail={camionLabel} delay={0.08} />
+        <StatusCard Icon={Fuel}      label="Combustible"   estado={combEst}   detail={combDetail}  delay={0.12} />
+        <StatusCard Icon={Wrench}    label="Mantenimiento" estado={mantEst}   detail={mantDetail}  delay={0.16} />
+        <StatusCard Icon={Activity}  label="Sistema"       estado="ok"        detail="Railway · Vercel" delay={0.20} />
       </div>
 
       {/* ── KPI ROW ──────────────────────────────────────────────── */}
