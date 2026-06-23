@@ -25,7 +25,7 @@ ULTRAMSG_INSTANCE = getattr(settings, "ULTRAMSG_INSTANCE", "instance181259")
 ULTRAMSG_TOKEN    = getattr(settings, "ULTRAMSG_TOKEN",    "73vmo1a3e5d0i6b8")
 WHATSAPP_NUMEROS  = getattr(settings, "WHATSAPP_NUMEROS",  "+595971966099,+595972449291")
 
-ALERTA_KM_CRITICA = 60    # rojo
+ALERTA_KM_CRITICA = 85    # rojo
 ALERTA_KM_BAJA    = 100   # amarillo
 COOLDOWN_CRITICA  = 60 * 60 * 3   # 3 horas entre alertas críticas
 COOLDOWN_BAJA     = 60 * 60 * 6   # 6 horas entre alertas bajas
