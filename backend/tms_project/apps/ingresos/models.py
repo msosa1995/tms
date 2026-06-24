@@ -83,6 +83,7 @@ class CategoriaGasto(models.TextChoices):
     MANTENIMIENTO = "mantenimiento", _("Mantenimiento")
     SEGUROS = "seguros", _("Seguros")
     IMPUESTOS = "impuestos", _("Impuestos")
+    SUELDO = "sueldo", _("Sueldo")
     OTROS = "otros", _("Otros")
 
 
