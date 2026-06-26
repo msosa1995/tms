@@ -62,20 +62,46 @@ export default function Gastos() {
     api.get("/vehiculos/", { params: { page_size: 200 } }).then(r => setVehiculos(r.data.results || r.data));
   }, []);
 
-  function openNew() { setForm(EMPTY); setModal(true); setError(""); }
-  function closeModal() { setModal(false); setError(""); }
+  function openNew()  { setForm(EMPTY); setModal(true); setError(""); }
+  function openEdit(g) {
+    setForm({
+      id: g.id,
+      categoria: g.categoria,
+      vehiculo: g.vehiculo || "",
+      fecha: g.fecha,
+      monto: g.monto,
+      descripcion: g.descripcion || "",
+    });
+    setModal(true); setError("");
+  }
+  function closeModal() { setModal(false); setError(""); setForm(EMPTY); }
 
   async function save() {
     setSaving(true); setError("");
     try {
       const payload = { ...form };
+      delete payload.id;
       if (!payload.vehiculo) delete payload.vehiculo;
-      await api.post("/gastos/", payload);
+      if (form.id) {
+        await api.patch(`/gastos/${form.id}/`, payload);
+      } else {
+        await api.post("/gastos/", payload);
+      }
       closeModal(); load();
     } catch (e) {
       const d = e.response?.data?.errors || e.response?.data;
       setError(typeof d === "string" ? d : JSON.stringify(d));
     } finally { setSaving(false); }
+  }
+
+  async function eliminar(id) {
+    if (!window.confirm("¿Eliminar este gasto?")) return;
+    try {
+      await api.delete(`/gastos/${id}/`);
+      load();
+    } catch (e) {
+      alert("No se pudo eliminar el gasto.");
+    }
   }
 
   async function handleImport(e) {
@@ -219,6 +245,7 @@ export default function Gastos() {
                             <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500, color:"#475569", background:"none", textTransform:"none", fontSize:12 }}>Categoría</th>
                             <th style={{ textAlign:"left", padding:"4px 8px", fontWeight:500, color:"#475569", background:"none", textTransform:"none", fontSize:12 }}>Descripción</th>
                             <th style={{ textAlign:"right", padding:"4px 8px", fontWeight:500, color:"#475569", background:"none", textTransform:"none", fontSize:12 }}>Monto</th>
+                            <th style={{ padding:"4px 8px", background:"none" }}></th>
                           </tr></thead>
                           <tbody>
                             {entradas.sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(g => (
@@ -231,6 +258,10 @@ export default function Gastos() {
                                 </td>
                                 <td style={{ padding:"6px 8px", color:"#64748B" }}>{g.descripcion?.slice(0,50)}</td>
                                 <td style={{ padding:"6px 8px", textAlign:"right", fontWeight:600, color:"#FF5B5B" }}>₲ {Number(g.monto).toLocaleString("es-PY")}</td>
+                                <td style={{ padding:"6px 8px", whiteSpace:"nowrap" }}>
+                                  <button onClick={() => openEdit(g)} style={{ background:"rgba(77,166,255,0.10)", border:"1px solid rgba(77,166,255,0.2)", color:"#4DA6FF", borderRadius:6, padding:"3px 8px", fontSize:11, cursor:"pointer", marginRight:4 }}>✏️ Editar</button>
+                                  <button onClick={() => eliminar(g.id)} style={{ background:"rgba(255,91,91,0.10)", border:"1px solid rgba(255,91,91,0.2)", color:"#FF5B5B", borderRadius:6, padding:"3px 8px", fontSize:11, cursor:"pointer" }}>🗑 Borrar</button>
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -246,10 +277,10 @@ export default function Gastos() {
       }
 
       {modal && (
-        <Modal title="Registrar Gasto" onClose={closeModal}
+        <Modal title={form.id ? "Editar Gasto" : "Registrar Gasto"} onClose={closeModal}
           footer={<>
             <button className="btn btn-outline" onClick={closeModal}>Cancelar</button>
-            <button className="btn btn-danger" onClick={save} disabled={saving}>{saving ? "Guardando..." : "Registrar"}</button>
+            <button className="btn btn-danger" onClick={save} disabled={saving}>{saving ? "Guardando..." : form.id ? "Guardar cambios" : "Registrar"}</button>
           </>}
         >
           {error && <div className="error-msg">{error}</div>}
